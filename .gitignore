@@ -1,4 +1,7 @@
 *.field
+*.podin
+*.podout
+*.vec
 *.txt
 *.vtr
 *.html
