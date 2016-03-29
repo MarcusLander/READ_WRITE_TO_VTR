@@ -1563,8 +1563,8 @@ else if(trim(adjustl(process)) == "FIELD") then
     
         close(50)
 
-        !u = u + ugal
-        !v = v + vgal
+        u = u + ugal
+        v = v + vgal
 
         ! calculate flow angle at every location
         do k = 1,nnz
