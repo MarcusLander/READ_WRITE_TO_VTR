@@ -12,7 +12,7 @@ public:: VTK_END_XML
 public:: write_VTR
 public:: PODIN_to_VTR
 public:: PODOUT_to_VTR
-public:: readField_POD
+public:: FIELD_to_PODIN
 
 ! portable kind-precision
 public:: R16P, FR16P
@@ -981,76 +981,6 @@ contains
     close(10)
     
     endsubroutine PODIN_to_VTR
-  
-    subroutine readField_POD(formOut, fcounter,nnx,nny,nnz,xArr,yArr,zArr,uWrite,vWrite,wWrite,&
-                        uWriteNorm,vWriteNorm,wWriteNorm,Uf,N)
-
-    implicit none
-    
-    character(*), intent(IN):: formOut  !
-    integer(I4P), intent(IN):: fcounter !
-    integer(I4P), intent(IN):: nnx      ! initial and final nodes of x axis
-    integer(I4P), intent(IN):: nny      ! initial and final nodes of y axis
-    integer(I4P), intent(IN):: nnz      ! initial and final nodes of z axis
-    integer(I4P), intent(IN):: N
-    real(R8P),    intent(IN):: xArr(:)  ! x coordinates
-    real(R8P),    intent(IN):: yArr(:)  ! y coordinates
-    real(R8P),    intent(IN):: zArr(:)  ! z coordinates
-    
-    real(I4P),    intent(IN):: uWrite(:)
-    real(I4P),    intent(IN):: vWrite(:)
-    real(I4P),    intent(IN):: wWrite(:)
-    !real(I4P),    intent(IN):: tWrite(:)
-    !real(I4P),    intent(IN):: phiWrite(:)
-    
-    real(I4P),    intent(IN):: uWriteNorm(:)
-    real(I4P),    intent(IN):: vWriteNorm(:)
-    real(I4P),    intent(IN):: wWriteNorm(:)
-    !real(I4P),    intent(IN):: tWriteNorm(:)
-    !real(I4P),    intent(IN):: phiWriteNorm(:)
-    
-    real(I4P), allocatable   :: Uf(:,:)
-    
-    integer:: i,j,a
-    
-    do i = 1,size(uWrite)
-        Uf(i,N) = uWrite(i)
-    enddo
-    do i = i, size(vWrite)*2
-        Uf(i,N) = vWrite(i -size(uWrite))
-    enddo
-    do i = i,size(wWrite)*3
-        Uf(i,N) = wWrite(i-size(uWrite)-size(vWrite))
-    enddo
-        
-    ! check if all values are equal
-    !write(*,*)"Checking Uf vs uWrite, Checking Uf vs vWrite, and Uf vs wWrite"
-    
-    do i = 1,size(uWrite)
-        if (Uf(i,N) == uWrite(i)) then
-            !do nothing
-        else
-            write(*,*)"Uf(",i,",",N,") does not equal uWrite(",i,")"
-        end if
-    enddo
-        
-    do i = i, size(vWrite)*2
-        if (Uf(i,N) == vWrite(i-size(uWrite))) then
-            !do nothing
-        else
-            write(*,*)"Uf(",i,",",N,") does not equal vWrite(",i,")"
-        end if
-    enddo
-    
-    do i = i,size(wWrite)*3
-        if (Uf(i,N) == wWrite(i -size(uWrite)-size(vWrite))) then
-            !do nothing
-        else
-            write(*,*)"Uf(",i,",",N,") does not equal wWrite(",i,")"
-        end if
-    enddo  
-    
-    endsubroutine readField_POD
 
     subroutine PODOUT_to_VTR(formOut)
 
@@ -1157,12 +1087,286 @@ contains
     
     endsubroutine PODOUT_to_VTR
     
+    subroutine FIELD_to_PODIN
+    
+        implicit none
+
+        !#### Real precision definitions:
+        integer, parameter:: R16P = selected_real_kind(33,4931) ! 33 digits, range $[\pm 10^{-4931}  ,\pm 10^{+4931}   -1]$
+        integer, parameter:: R8P  = selected_real_kind(15,307)  ! 15 digits, range $[\pm 10^{-307}~~ ,\pm 10^{+307}~~  -1]$
+        integer, parameter:: R4P  = selected_real_kind(6,37)    ! 6  digits, range $[\pm 10^{-37}~~~~,\pm 10^{+37}~~~~ -1]$
+        integer, parameter:: R_P  = R8P                         ! default real precision
+
+        !#### Integer precision definitions:
+
+        integer, parameter:: I8P  = selected_int_kind(18)       ! range $[-2^{63} ,+2^{63}  -1]$
+        integer, parameter:: I4P  = selected_int_kind(9)        ! range $[-2^{31} ,+2^{31}  -1]$
+        integer, parameter:: I2P  = selected_int_kind(4)        ! range $[-2^{15} ,+2^{15}  -1]$
+        integer, parameter:: I1P  = selected_int_kind(2)        ! range $[-2^{7}~~,+2^{7}~~ -1]$
+        integer, parameter:: I_P  = I4P                         ! default integer precision
+
+        !#### Variables dimensions
+        character (len=100) :: Buffer                           !A character Buffer to read input argument
+        character (len=10)  :: xd,yd
+        integer :: i,j,k,keff,fcounter                          !Counter variables
+        integer :: iz									        !counter variables
+        integer :: stat                                         !End of line variable
+        integer :: UnitNum                                      !UnitNum
+        !#### GRID PARAMETERS
+        integer :: nnx, nny, nnz      					        !x, y, and z grid dimensions 
+        integer :: nxy                					        !Number of grid points in a horizontal plane
+        real    :: xl, yl, zl         	  					    ! x, y, and z domain sizes
+        real    :: dx, dy, dz            					    ! x, y, and z grid lengths
+        integer :: nscalars 							        !Number of scalars
+                    
+        real(kind = I4P), dimension(:), allocatable :: xArr, yArr,zArr		                              !Array of x and y locations on the grid	                            						
+        real, allocatable, dimension(:,:,:)         :: u,v,w,t,e,p,q,c,phi                                !Parameter dimension      
+
+        !Plane Arrays in the format to be written into vec files
+        real(kind= R4P), dimension(:), allocatable  :: uWrite,vWrite,wWrite,tWrite,phiWrite     
+                            	
+        real    :: ugtop, ugbot, vgtop, vgbot
+        real    :: dtdzf, divgls, fcor, amonin, utau
+        real    :: time_start, dt, z0
+        real    :: ugal, vgal
+
+        !#### Output file name
+        Character (len=100) :: WriteFileName     
+
+        !!#### Call Create fieldfiles subroutine
+        !  call CreateFieldPodInFileList
+  
+        !#### Start the reading file and write to .vec file here
+          call getarg(1,Buffer)
+          fcounter = 0
+  
+
+          open(unit=10,file="FileList.txt")
+          read(10,*,iostat=stat) Buffer
+  
+          open(unit=11,file=buffer,form="unformatted")
+            read(11) time_start, nnx, nny, nnz, xl, yl, zl
+            read(11) dt, z0, utau
+            read(11) divgls, fcor, ugtop, ugbot, vgtop, vgbot
+          close(11)
+  
+          dx = xl/nnx
+          dy = yl/nny
+          dz = zl/nnz                                 
+  
+          !#### Calculate x, y and z locations of the grid
+          allocate(xArr(nnx))
+          allocate(yArr(nny))
+          allocate(zArr(nnz))
+  
+          do i=1,nnx
+              xArr(i) = dble(i-1)*dx
+              yArr(i) = dble(i-1)*dy
+          end do
+          do k=1,nnz
+              zArr(k) = dble(k-1)*dz
+          end do
+  
+          allocate(uWrite(nnx*nny*nnz))
+          allocate(vWrite(nnx*nny*nnz))
+          allocate(wWrite(nnx*nny*nnz)) 
+          allocate(tWrite(nnx*nny*nnz)) 
+          allocate(phiWrite(nnx*nny*nnz)) 
+  
+          allocate(u(nnx,nny,nnz))
+          allocate(v(nnx,nny,nnz))
+          allocate(w(nnx,nny,nnz))
+          allocate(t(nnx,nny,nnz))
+          allocate(e(nnx,nny,nnz))
+          allocate(p(nnx,nny,nnz))
+          allocate(phi(nnx,nny,nnz))
+
+          print*,'allocated all memory'
+          !write(*,*) 'allocated all memory'
+
+  
+        !####################################################################################################################################################
+        !!!!Looping through the file name if stat = 0
+
+        do while (stat .eq. 0)                            
+  
+          fcounter = fcounter + 1
+  
+          open(unit=11,file=Buffer,form="unformatted")
+          read(11) time_start, nnx, nny, nnz, xl, yl, zl
+          read(11) dt, z0, utau
+          read(11) divgls, fcor, ugtop, ugbot, vgtop, vgbot
+  
+          !print*,'time start is ', time_start
+          !print*,'time step is', dt
+          !print*,'X-grid dimension: ', nnx
+          !print*,'Y-grid dimension: ', nny
+          !print*,'Z-grid dimension: ', nnz
+
+          nxy = nnx*nny
+ 
+          ugal = (max(0.,max(ugtop,ugbot))+min(0.,min(ugtop,ugbot)))*0.5
+          vgal = (max(0.,max(vgtop,vgbot))+min(0.,min(vgtop,vgbot)))*0.5
+  
+              do iz=1,nnz
+                read(11) u(:,:,iz), v(:,:,iz), w(:,:,iz), e(:,:,iz), p(1:nnx,1:nny,iz)          
+              end do
+      
+          close(11)
+  
+        u = u + ugal
+        v = v + vgal
+
+        write(*,*) 'file counter is ',fcounter
+
+  
+        !####################################################################################################################################################
+        !Calculate uWrite, vWrite, and wWrite with option of tWrite and phiWrite 
+            do k=1,nnz
+                do j = 1, nny
+                    do i = 1, nnx
+                    uWrite((k-1)*nnx*nny+(j-1)*nnx+i) = u(i,j,k)
+                    end do
+                end do
+            end do
+
+    
+            do k=1,nnz
+                do j = 1, nny
+                    do i = 1, nnx
+                    vWrite((k-1)*nnx*nny+(j-1)*nnx+i) = v(i,j,k)
+                    end do
+                end do
+            end do
+     
+            do k=1,nnz
+                do j = 1, nny
+                    do i = 1, nnx
+                    wWrite((k-1)*nnx*nny+(j-1)*nnx+i) = w(i,j,k)
+                    end do
+                end do
+            end do
+  
+        !   do k=1,nnz
+        !     do j = 1, nny
+        !        do i = 1, nnx
+        !           tWrite((k-1)*nnx*nny+(j-1)*nnx+i) = t(i,j,k)
+        !        end do
+        !     end do
+        !   end do
+        !
+        !   do k=1,nnz
+        !     do j = 1, nny
+        !        do i = 1, nnx
+        !           phiWrite((k-1)*nnx*nny+(j-1)*nnx+i) = phi(i,j,k)
+        !        end do
+        !     end do
+        !   end do
+        !####################################################################################################################################################
+  
+  
+        !####################################################################################################################################################
+        !!!Calculate uWriteNorm, vWriteNorm, and wWriteNorm
+        !      do k=1,nnz
+        !        do j = 1, nny
+        !           do i = 1, nnx
+        !              uWriteNorm((k-1)*nnx*nny+(j-1)*nnx+i) = upnorm(i,j,k)
+        !           end do
+        !        end do
+        !      end do
+        !   
+        !      do k=1,nnz
+        !        do j = 1, nny
+        !           do i = 1, nnx
+        !              vWriteNorm((k-1)*nnx*nny+(j-1)*nnx+i) = vpnorm(i,j,k)
+        !           end do
+        !        end do
+        !      end do
+        !   
+        !      do k=1,nnz
+        !        do j = 1, nny
+        !           do i = 1, nnx
+        !              wWriteNorm((k-1)*nnx*nny+(j-1)*nnx+i) = wpnorm(i,j,k)
+        !           end do
+        !        end do
+        !      end do
+        !       
+        !   do k=1,nnz
+        !     do j = 1, nny
+        !        do i = 1, nnx
+        !           tWriteNorm((k-1)*nnx*nny+(j-1)*nnx+i) = tpnorm(i,j,k)
+        !        end do
+        !     end do
+        !   end do
+        !
+        !   do k=1,nnz
+        !     do j = 1, nny
+        !        do i = 1, nnx
+        !           phiWriteNorm((k-1)*nnx*nny+(j-1)*nnx+i) = phipnorm(i,j,k)
+        !        end do
+        !     end do
+        !   end do
+  
+        !####################################################################################################################################################
+  
+
+            !Write the output file name
+            UnitNum=20+fcounter
+            Write(WriteFileName,'(a,I0,a)') 'POD_input', fcounter, '.podin' 
+            open(unit=UnitNum,file=WriteFileName)
+
+    
+            !Write the comment line here
+                write(UnitNum,'(a)',advance='no') 'Title: '
+                write(UnitNum,'(a)') WriteFilename
+                write(UnitNum,'(a)',advance='no') 'VARIABLES= "X pixel","Y pixel", "Z pixel", "U pixel", "V pixel", "W pixel", I='
+                Write(UnitNum,'(i0)',advance='no') nnx
+                write(UnitNum,'(a)',advance='no') ', J='
+                Write(UnitNum,'(i0)',advance='no') nny
+                Write(UnitNum,'(a)',advance='no') ', K='
+                Write(UnitNum,'(i0)') nnz
+                Write(UnitNum,'(a)') 'X,Y,Z: location of the grid point in x,y,z '
+                write(UnitNum,'(a)') 'U,V,W: three dimensional velocity components'
+                Write(UnitNum,'(a)') 'I,J,K: number of grid points in x,y,z domain'
+                Write(UnitNum,'(i0)') nnx
+                Write(UnitNum,'(i0)') nny
+                Write(UnitNum,'(i0)') nnz
+
+        
+
+            do k=1,nnz         
+                !Write x,y,u,v,and snr here
+                do j=1,nny
+                    do i=1,nnx
+                    write(UnitNum,'(f10.7, a, f10.7, a, f10.7, a, f10.7, a, f10.7, a, f10.7)')  &
+                                                xArr(i),' ', yArr(j), ' ', zArr(k), ' ', &
+                                                uWrite((k-1)*nnx*nny+(j-1)*nnx+i), ' ',    &
+                                                vWrite((k-1)*nnx*nny+(j-1)*nnx+i), ' ',    &
+                                                wWrite((k-1)*nnx*nny+(j-1)*nnx+i)
+                    end do
+                end do         
+            end do    
+
+            close (UnitNum) 
+
+  
+        !####################################################################################################################################################
+  
+        read(10,*,iostat=stat) Buffer
+        end do
+        close(10)
+        !####################################################################################################################################################
+        !END READING FILES
+    
+    end subroutine
+    
 endmodule LIB_VTK_IO
 
 module CREATE_LIST
 public:: CreateFileList
 public:: CreateFileListPODOUT
-! public:: CreateFileListPODOUTSingle
+public:: CreateFieldPodInFileList
+
 contains
     
     subroutine CreateFileList(low,high,incr,fileName,extension)
@@ -1226,6 +1430,22 @@ contains
 
     end subroutine
 
+    subroutine CreateFieldPodInFileList()
+
+        implicit none
+    
+        character(len=30):: fieldname
+        integer          :: i
+
+          open(unit=9,file="FileList.txt")
+          do i=960,970,10
+          !do i=10,960,10
+            write(9,'(a,i0,a)') 'test', i ,'.field'
+          end do
+          close(9)
+
+    end subroutine
+    
 endmodule CREATE_LIST
 
 program read_write_3d_filter
@@ -1287,21 +1507,27 @@ open(unit=65,file="commands.txt")
 	
 	! determine output mode
 	read(65,FI4P) input
-		! FLAG_process = 1 -> *.field to *.VTR
-		! FLAG_process = 2 -> *.PODIN to *.VTR
-		! FLAG_process = 3 -> *.PODOUT to *.VTR
+		! input = 1 -> *.field to *.VTR
+        ! input = 2 -> *.field to *.PODIN
+		! input = 3 -> *.PODIN to *.VTR
+		! input = 4 -> *.PODOUT to *.VTR
 		
 		if(input == 1) then
 			process = 'FIELD'
 			fileName = 'test'
 			extension = '.field'
 		
-		else if(input == 2) then
+        else if(input == 2) then
+			process = 'cPODIN'
+			fileName = 'test'
+			extension = '.field'
+            
+		else if(input == 3) then
 			process = 'PODIN'
 			fileName = 'POD_input'
 			extension = '.PODIN'
 		
-		else if(input == 3) then
+		else if(input == 4) then
 			process = 'PODOUT'
 			fileName = 'POD_M'
 			extension = '.PODOUT'
@@ -1347,6 +1573,8 @@ if(trim(adjustl(process)) == "PODIN") then
     call PODIN_to_VTR(formOut)
 else if(trim(adjustl(process)) == "PODOUT") then
     call PODOUT_to_VTR(formOut)
+else if(trim(adjustl(process)) == "cPODIN") then
+    call FIELD_to_PODIN
 else if(trim(adjustl(process)) == "FIELD") then
     
     open(unit=50,file=buffer,form="unformatted")

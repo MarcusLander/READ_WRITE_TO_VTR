@@ -6,4 +6,5 @@
 *.vtr
 *.html
 *.htm
+*.suo
 !commands.txt
