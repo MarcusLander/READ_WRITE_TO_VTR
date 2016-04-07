@@ -13,6 +13,7 @@ public:: write_VTR
 public:: PODIN_to_VTR
 public:: PODOUT_to_VTR
 public:: FIELD_to_PODIN
+public:: PIV_to_VTR
 
 ! portable kind-precision
 public:: R16P, FR16P
@@ -798,88 +799,92 @@ contains
   
     subroutine write_VTR(formOut, fcounter,nnx,nny,nnz,xArr,yArr,zArr,uWrite,vWrite,wWrite,&
                         uWriteNorm,vWriteNorm,wWriteNorm,fileName)
-    !subroutine write_VTR(fcounter,nnx,nny,nnz,xArr,yArr,zArr,uWrite,vWrite,wWrite)
-    !call this subroutine as
-    !   call write_VTR(fcounter,nnx,nny,nnz,xArr,yArr,zArr)
+        !subroutine write_VTR(fcounter,nnx,nny,nnz,xArr,yArr,zArr,uWrite,vWrite,wWrite)
+        !call this subroutine as
+        !   call write_VTR(fcounter,nnx,nny,nnz,xArr,yArr,zArr)
     
-    character(*), intent(IN):: formOut  !
-    character(*), intent(IN):: fileName !
-    integer(I4P), intent(IN):: fcounter !
-    integer(I4P), intent(IN):: nnx      ! initial and final nodes of x axis
-    integer(I4P), intent(IN):: nny      ! initial and final nodes of y axis
-    integer(I4P), intent(IN):: nnz      ! initial and final nodes of z axis
-    real(R8P),    intent(IN):: xArr(:)  ! x coordinates
-    real(R8P),    intent(IN):: yArr(:)  ! y coordinates
-    real(R8P),    intent(IN):: zArr(:)  ! z coordinates
+        character(*), intent(IN):: formOut  !
+        character(*), intent(IN):: fileName !
+        integer(I4P), intent(IN):: fcounter !
+        integer(I4P), intent(IN):: nnx      ! initial and final nodes of x axis
+        integer(I4P), intent(IN):: nny      ! initial and final nodes of y axis
+        integer(I4P), intent(IN):: nnz      ! initial and final nodes of z axis
+        real(R8P),    intent(IN):: xArr(:)  ! x coordinates
+        real(R8P),    intent(IN):: yArr(:)  ! y coordinates
+        real(R8P),    intent(IN):: zArr(:)  ! z coordinates
     
-    real(I4P),    intent(IN):: uWrite(:)
-    real(I4P),    intent(IN):: vWrite(:)
-    real(I4P),    intent(IN):: wWrite(:)
-    !real(I4P),    intent(IN):: tWrite(:)
-    !real(I4P),    intent(IN):: phiWrite(:)
+        real(I4P), allocatable, intent(IN):: uWrite(:)
+        real(I4P), allocatable, intent(IN):: vWrite(:)
+        real(I4P), allocatable, intent(IN):: wWrite(:)
+        !real(I4P),    intent(IN):: tWrite(:)
+        !real(I4P),    intent(IN):: phiWrite(:)
     
-    real(I4P), allocatable, intent(IN):: uWriteNorm(:)
-    real(I4P), allocatable, intent(IN):: vWriteNorm(:)
-    real(I4P), allocatable, intent(IN):: wWriteNorm(:)
-    !real(I4P),    intent(IN):: tWriteNorm(:)
-    !real(I4P),    intent(IN):: phiWriteNorm(:)
+        real(I4P), allocatable, intent(IN):: uWriteNorm(:)
+        real(I4P), allocatable, intent(IN):: vWriteNorm(:)
+        real(I4P), allocatable, intent(IN):: wWriteNorm(:)
+        !real(I4P),    intent(IN):: tWriteNorm(:)
+        !real(I4P),    intent(IN):: phiWriteNorm(:)
     
     
-    !--------------------------------------------------------------------------------------------------------------------------------
-    !! this is where read_write calls functions from the LIB_VTK_IO.f90 library to run for converting from .vtk format to .vtr format
-    !--------------------------------------------------------------------------------------------------------------------------------
+        !--------------------------------------------------------------------------------------------------------------------------------
+        !! this is where read_write calls functions from the LIB_VTK_IO.f90 library to run for converting from .vtk format to .vtr format
+        !--------------------------------------------------------------------------------------------------------------------------------
     
 
-    !truncName = buffer(5:index(trim(adjustl(buffer)),'.field')-1)
-    !write(fchar,'(I4)') fcounter
-    !truncName = buffer(5:index(trim(adjustl(buffer)),'.field')-1)
-    !write(truncName,*) truncName,fcounter
-    !print*, trim(adjustl(truncName))//fchar//'.vtr'
+        !truncName = buffer(5:index(trim(adjustl(buffer)),'.field')-1)
+        !write(fchar,'(I4)') fcounter
+        !truncName = buffer(5:index(trim(adjustl(buffer)),'.field')-1)
+        !write(truncName,*) truncName,fcounter
+        !print*, trim(adjustl(truncName))//fchar//'.vtr'
     
-    character fchar*40
-    integer(kind = 4) :: iErr = 0 !To store the output of each VTK_LIB_IO command
+        character fchar*40
+        integer(kind = 4) :: iErr = 0 !To store the output of each VTK_LIB_IO command
         
-    write(fchar, '(I4)')fcounter
-    iErr = VTK_INI_XML(output_format = trim(adjustl(formOut)), filename = trim(adjustl(fileName))//'.vtr', &
-		    mesh_topology = 'RectilinearGrid', nx1=1, nx2=nnx, ny1=1, ny2=nny, nz1=1, nz2=nnz)
+        write(fchar, '(I4)')fcounter
+        iErr = VTK_INI_XML(output_format = trim(adjustl(formOut)), filename = trim(adjustl(fileName))//'.vtr', &
+		        mesh_topology = 'RectilinearGrid', nx1=1, nx2=nnx, ny1=1, ny2=nny, nz1=1, nz2=nnz)
         
-    iErr = VTK_GEO_XML(nx1=1, nx2=nnx, ny1=1, ny2=nny, nz1=1, nz2=nnz, X=xArr, Y=yArr, Z=zArr)
+        iErr = VTK_GEO_XML(nx1=1, nx2=nnx, ny1=1, ny2=nny, nz1=1, nz2=nnz, X=xArr, Y=yArr, Z=zArr)
     
-    iErr = VTK_DAT_XML(var_location = 'node', var_block_action = 'OPEN')
+        iErr = VTK_DAT_XML(var_location = 'node', var_block_action = 'OPEN')
     
-    iErr = VTK_VAR_XML(NC_NN = nnx*nny*nnz, varname = 'u', var = uWrite)
-    iErr = VTK_VAR_XML(NC_NN = nnx*nny*nnz, varname = 'v', var = vWrite)
-    iErr = VTK_VAR_XML(NC_NN = nnx*nny*nnz, varname = 'w', var = wWrite)
-    !iErr = VTK_VAR_XML(NC_NN = nnx*nny*nnz, varname = 'tprime', var = tWrite)
-    !iErr = VTK_VAR_XML(NC_NN = nnx*nny*nnz, varname = 'phiprime', var = phiWrite)
+        iErr = VTK_VAR_XML(NC_NN = nnx*nny*nnz, varname = 'u', var = uWrite)
+        iErr = VTK_VAR_XML(NC_NN = nnx*nny*nnz, varname = 'v', var = vWrite)
     
-!--------------------------------------------------------------------------------------------------------------------------------
-! Write the normals
-!--------------------------------------------------------------------------------------------------------------------------------
+        if(allocated(wWrite))then
+            iErr = VTK_VAR_XML(NC_NN = nnx*nny*nnz, varname = 'w', var = wWrite)
+        end if
     
-    if(allocated(uWriteNorm))then
-        iErr = VTK_VAR_XML(NC_NN = nnx*nny*nnz, varname = 'uprimenorm', var = uWriteNorm)
-    end if
+        !iErr = VTK_VAR_XML(NC_NN = nnx*nny*nnz, varname = 'tprime', var = tWrite)
+        !iErr = VTK_VAR_XML(NC_NN = nnx*nny*nnz, varname = 'phiprime', var = phiWrite)
     
-    if(allocated(uWriteNorm))then
-        iErr = VTK_VAR_XML(NC_NN = nnx*nny*nnz, varname = 'vprimenorm', var = vWriteNorm)
-    end if
+    !--------------------------------------------------------------------------------------------------------------------------------
+    ! Write the normals
+    !--------------------------------------------------------------------------------------------------------------------------------
     
-    if(allocated(uWriteNorm))then
-        iErr = VTK_VAR_XML(NC_NN = nnx*nny*nnz, varname = 'wprimenorm', var = wWriteNorm)
-    end if
+        if(allocated(uWriteNorm))then
+            iErr = VTK_VAR_XML(NC_NN = nnx*nny*nnz, varname = 'uprimenorm', var = uWriteNorm)
+        end if
     
-    !iErr = VTK_VAR_XML(NC_NN = nnx*nny*nnz, varname = 'tprimenorm', var = tWriteNorm)
-    !iErr = VTK_VAR_XML(NC_NN = nnx*nny*nnz, varname = 'phiprimenorm', var = phiWriteNorm)
+        if(allocated(uWriteNorm))then
+            iErr = VTK_VAR_XML(NC_NN = nnx*nny*nnz, varname = 'vprimenorm', var = vWriteNorm)
+        end if
     
-    iErr = VTK_DAT_XML(var_location = 'node', var_block_action = 'CLOSE')
+        if(allocated(uWriteNorm))then
+            iErr = VTK_VAR_XML(NC_NN = nnx*nny*nnz, varname = 'wprimenorm', var = wWriteNorm)
+        end if
     
-    iErr = VTK_GEO_XML()
+        !iErr = VTK_VAR_XML(NC_NN = nnx*nny*nnz, varname = 'tprimenorm', var = tWriteNorm)
+        !iErr = VTK_VAR_XML(NC_NN = nnx*nny*nnz, varname = 'phiprimenorm', var = phiWriteNorm)
     
-    iErr = VTK_END_XML()
-        !Binary output issue is here
-	    !VTK_END_XML begins on Line 3460
-    return
+        iErr = VTK_DAT_XML(var_location = 'node', var_block_action = 'CLOSE')
+    
+        iErr = VTK_GEO_XML()
+    
+        iErr = VTK_END_XML()
+            !Binary output issue is here
+	        !VTK_END_XML begins on Line 3460
+        return
     endsubroutine write_VTR
 
     subroutine PODIN_to_VTR(formOut)
@@ -928,60 +933,166 @@ contains
         real(R4P), allocatable :: vWriteNorm(:)
         real(R4P), allocatable :: wWriteNorm(:)
         
-    !begin looping through all availible POD_in files
-    count = 0
-    fcounter = 0
-    open(unit=10,file="FileList.txt")
-    read(10,*,iostat=stat) buffer
+        !begin looping through all availible POD_in files
+        count = 0
+        fcounter = 0
+        open(unit=10,file="FileList.txt")
+        read(10,*,iostat=stat) buffer
     
-    do while (stat .eq. 0)
+        do while (stat .eq. 0)
         
-        fileName = buffer(1:index(trim(adjustl(buffer)),'.PODIN')-1)
+            fileName = buffer(1:index(trim(adjustl(buffer)),'.PODIN')-1)
         
-        fcounter = fcounter + 1
-        write(fchar,'(I4)') fcounter
-        open(unit=12,file=trim(adjustl(buffer)))
-        ! eventually this will change to:
-        ! open(unit=10,file="POD_"//trim(adjustl(fchar))//".PODIN")
+            fcounter = fcounter + 1
+            write(fchar,'(I4)') fcounter
+            open(unit=12,file=trim(adjustl(buffer)))
+            ! eventually this will change to:
+            ! open(unit=10,file="POD_"//trim(adjustl(fchar))//".PODIN")
         
-        ! quickly read through the header of the file
-        read(12,'(a)') Buffer, Buffer, Buffer, Buffer, Buffer
+            ! quickly read through the header of the file
+            read(12,'(a)') Buffer, Buffer, Buffer, Buffer, Buffer
         
-        ! read in the grid size
-        read(12,'(I4)') nnx
-        read(12,'(I4)') nny
-        read(12,'(I4)') nnz
+            ! read in the grid size
+            read(12,'(I4)') nnx
+            read(12,'(I4)') nny
+            read(12,'(I4)') nnz
         
-        if(fcounter == 1) then
-            allocate(xArr(nnx))
-            allocate(yArr(nny))
-            allocate(zArr(nnz))        
-            allocate(uWrite(nnx*nny*nnz))
-            allocate(vWrite(nnx*nny*nnz))
-            allocate(wWrite(nnx*nny*nnz))
-        end if
+            if(fcounter == 1) then
+                allocate(xArr(nnx))
+                allocate(yArr(nny))
+                allocate(zArr(nnz))        
+                allocate(uWrite(nnx*nny*nnz))
+                allocate(vWrite(nnx*nny*nnz))
+                allocate(wWrite(nnx*nny*nnz))
+            end if
         
-        do k=1,nnz
-            do j=1,nny
-                do i=1,nnx
-                    read(12,*) xArr(i), yArr(j), zArr(k), uWrite((k-1)*nnx*nny+(j-1)*nnx+i), vWrite((k-1)*nnx*nny+(j-1)*nnx+i), wWrite((k-1)*nnx*nny+(j-1)*nnx+i)
+            do k=1,nnz
+                do j=1,nny
+                    do i=1,nnx
+                        read(12,*) xArr(i), yArr(j), zArr(k), uWrite((k-1)*nnx*nny+(j-1)*nnx+i), vWrite((k-1)*nnx*nny+(j-1)*nnx+i), wWrite((k-1)*nnx*nny+(j-1)*nnx+i)
+                    enddo
                 enddo
             enddo
-        enddo
         
-        !convert this PODIN file to *.VTR
-        call write_VTR(formOut,fcounter,nnx,nny,nnz,xArr,yArr,zArr,uWrite,vWrite,wWrite,uWriteNorm,vWriteNorm,wWriteNorm,fileName)
+            !convert this PODIN file to *.VTR
+            call write_VTR(formOut,fcounter,nnx,nny,nnz,xArr,yArr,zArr,uWrite,vWrite,wWrite,uWriteNorm,vWriteNorm,wWriteNorm,fileName)
         
-        close(12)
-        read(10,*,iostat=stat)buffer
+            close(12)
+            read(10,*,iostat=stat)buffer
         
-    enddo      
+        enddo      
     
-    close(12)
-    close(10)
+        close(12)
+        close(10)
     
     endsubroutine PODIN_to_VTR
 
+    subroutine PIV_to_VTR(formOut)
+    
+        implicit none
+        
+        !#### Flags getting passed in
+        character*10, intent(IN):: formOut
+
+        !#### Variables dimensions
+        character (len=100) :: Buffer                           !A character Buffer to read input argument
+        character (len=10)  :: xd,yd
+        character*20 :: fileName
+        integer :: i,j,k,keff,fcounter                          !Counter variables
+        integer :: iz									        !counter variables
+        integer :: stat                                         !End of line variable
+        integer :: UnitNum                                      !UnitNum
+        !#### GRID PARAMETERS
+        integer :: nnx, nny, nnz      					        !x, y, and z grid dimensions 
+        integer :: nxy                					        !Number of grid points in a horizontal plane
+        real    :: xl, yl, zl         	  					    ! x, y, and z domain sizes
+        real    :: dx, dy, dz            					    ! x, y, and z grid lengths
+        integer :: nscalars 							        !Number of scalars
+
+        !####Number of z levels used
+        !integer(kind = I4P) :: nnzused                     
+ 
+        real(kind = R8P), dimension(:), allocatable :: xArr, yArr,zArr		                              !Array of x and y locations on the grid	                            						
+        real, allocatable, dimension(:,:,:)         :: u,v,w,t,e,p,q,c,phi                                !Parameter dimension      
+        real, allocatable, dimension(:,:,:)         :: up, wp, vp, tp, phip
+        real, allocatable, dimension(:)             :: TMean, phiMean
+        real, allocatable, dimension(:)             :: varwp,varup,varvp,vartp,varphip
+        real, allocatable, dimension(:,:)           :: velMean
+
+        !Plane Arrays in the format to be written into vec files
+        real(kind= R4P), dimension(:), allocatable  :: uWrite,vWrite,wWrite,tWrite,phiWrite     
+                            	
+        real    :: ugtop, ugbot, vgtop, vgbot
+        real    :: dtdzf, divgls, fcor, amonin, utau
+        real    :: time_start, dt, z0
+        
+        character*40 :: fchar
+        character*40 :: temp
+        
+        integer :: count
+        integer :: locate
+        
+        real(R4P), allocatable :: uWriteNorm(:)
+        real(R4P), allocatable :: vWriteNorm(:)
+        real(R4P), allocatable :: wWriteNorm(:)
+        
+        !begin looping through all availible POD_in files
+        count = 0
+        fcounter = 0
+        open(unit=10,file="FileList.txt")
+        read(10,*,iostat=stat) buffer
+    
+        do while (stat .eq. 0)
+        
+            fileName = buffer(1:index(trim(adjustl(buffer)),'.dat')-1)
+        
+            fcounter = fcounter + 1
+            write(fchar,'(I4)') fcounter
+            open(unit=12,file=trim(adjustl(buffer)))
+            ! eventually this will change to:
+            ! open(unit=10,file="POD_"//trim(adjustl(fchar))//".PODIN")
+        
+            ! quickly read through the header of the file
+            read(12,'(a)') Buffer, Buffer, Buffer
+        
+            ! read in the grid size
+            locate = (index(trim(adjustl(buffer)),'I=')+2)
+            read(buffer((index(trim(adjustl(buffer)),'I=')+2):len(buffer)),'(I4P)') nnx
+            read(buffer((index(trim(adjustl(buffer)),'J=')+2):len(buffer)),'(I4P)') nny
+            !read(12,'(I4)') nnz
+            nnz=1
+        
+            if(fcounter == 1) then
+                allocate(xArr(nnx))
+                allocate(yArr(nny))
+                allocate(zArr(nnz))        
+                allocate(uWrite(nnx*nny*nnz))
+                allocate(vWrite(nnx*nny*nnz))
+                ! allocate(wWrite(nnx*nny*nnz))
+            end if
+        
+            do k=1,nnz
+                do j=1,nny
+                    do i=1,nnx
+                        read(12,*) xArr(i), yArr(j), uWrite((k-1)*nnx*nny+(j-1)*nnx+i), vWrite((k-1)*nnx*nny+(j-1)*nnx+i)
+                        ! wWrite((k-1)*nnx*nny+(j-1)*nnx+i) = 0
+                        zArr(k) = 0
+                    enddo
+                enddo
+            enddo
+        
+            !convert this PODIN file to *.VTR
+            call write_VTR(formOut,fcounter,nnx,nny,nnz,xArr,yArr,zArr,uWrite,vWrite,wWrite,uWriteNorm,vWriteNorm,wWriteNorm,fileName)
+        
+            close(12)
+            read(10,*,iostat=stat)buffer
+        
+        enddo
+    
+        close(12)
+        close(10)
+    end subroutine
+    
     subroutine PODOUT_to_VTR(formOut)
 
         implicit none
@@ -1508,7 +1619,9 @@ open(unit=65,file="commands.txt")
 		! input = 1 -> *.field to *.VTR
         ! input = 2 -> *.field to *.PODIN
 		! input = 3 -> *.PODIN to *.VTR
-		! input = 4 -> *.PODOUT to *.VTR
+		! input = 4 -> *.PODOUT to *.VTR    (PODOUT as a Single Mode)
+        ! input = 5 -> *.PODOUT to *.VTR    (PODOUT as Reconstructed)
+        ! input = 6 -> *.dat to *.VTR       (2D-PIV to 2D-VTR format)
 		
 		if(input == 1) then
 			process = 'FIELD'
@@ -1534,6 +1647,11 @@ open(unit=65,file="commands.txt")
 			process = 'rPODOUT'
 			fileName = 'POD_M'
 			extension = '.PODOUT'
+        
+        else if(input == 6) then
+			process = 'PIVVTR'
+			fileName = 'PIV_input'
+			extension = '.dat'
 		end if
 	
 	
@@ -1589,6 +1707,8 @@ else if(trim(adjustl(process)) == "PODOUT") then
     call PODOUT_to_VTR(formOut)
 else if(trim(adjustl(process)) == "cPODIN") then
     call FIELD_to_PODIN
+else if(trim(adjustl(process)) == "PIVVTR") then
+    call PIV_to_VTR(formOut)
 else if(trim(adjustl(process)) == "FIELD") then
     
     open(unit=50,file=buffer,form="unformatted")

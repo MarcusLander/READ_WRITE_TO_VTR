@@ -1,6 +1,64 @@
-5
+6
 2
 1
-150
+5
 1
 149
+
+
+END OF FILE - DO NOT EDIT PAST THIS LINE
+--------------------------------------------------------------------------------------------------------------------------------
+Syntax of Commands.txt
+
+- Line 1: what conversion mode to execute
+
+	1 -> *.field to *.VTR
+        2 -> *.field to *.PODIN
+	3 -> *.PODIN to *.VTR
+	4 -> *.PODOUT to *.VTR    (PODOUT as a Single Mode)
+        5 -> *.PODOUT to *.VTR    (PODOUT as Reconstructed)
+	6 -> *.dat to *.VTR       (2D-PIV to 2D-VTR format)
+
+
+- Line 2: what output method to use
+
+	1 -> ASCII
+	2 -> binary
+
+
+- Line 3: starting file number 
+
+	test1.field
+	POD_input1.PODIN
+	PIV_1.dat
+
+
+- Line 4: ending file number
+
+	test960.field
+	POD_input20.PODIN
+	PIV_5.dat
+
+
+- Line 5: the file number increment
+
+	if 10 then convert:
+
+	  test510.field
+	  test520.field
+	  test530.field
+	  test540.field
+	  .
+	  .
+	  .
+
+
+- Line 6: The Mode being converted
+
+	applies only when converting PODOUT Reconstruction Files
+	Does not apply to
+	  - *.field	-> *.VTR
+	  - *.field	-> *.PODIN
+	  - *.PODIN	-> *.VTR
+	  - *.PODOUT	-> *.VTR	(PODOUT as a Single Mode)
+	  - *.dat	-> *.VTR	(2D-PIV to 2D-VTR format)
