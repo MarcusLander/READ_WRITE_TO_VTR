@@ -1364,7 +1364,7 @@ endmodule LIB_VTK_IO
 
 module CREATE_LIST
 public:: CreateFileList
-public:: CreateFileListPODOUT
+public:: CreateFileListRPODOUT
 public:: CreateFieldPodInFileList
 
 contains
@@ -1388,22 +1388,20 @@ contains
 
     end subroutine
     
-    subroutine CreateFileListPODOUT(low,high,incr,fileName,extension,modes)
+    subroutine CreateFileListRPODOUT(low,high,incr,fileName,extension,mode)
 
         implicit none
         
         integer, intent(IN)      :: low,high,incr     ! the lower and upper address ranges used to populate the list of files
         character*20, intent(IN) :: fileName
         character*10, intent(IN) :: extension
-        integer, intent(IN)      :: modes
-        integer                  :: i,j
+        integer, intent(IN)      :: mode
+        integer                  :: i
 
         open(unit=9,file="FileList.txt")
         
-        do j=1,modes
-            do i=low,high,1
-                write(9,'(a,i0,a,i0,a)') trim(adjustl(fileName)),j,'_output',i ,trim(adjustl(extension))
-            end do
+        do i=low,high,incr
+            write(9,'(a,i0,a,i0,a)') trim(adjustl(fileName)),mode,'_output',i ,trim(adjustl(extension))
         end do
         
         close(9)
@@ -1474,7 +1472,7 @@ integer :: nnx, nny, nnz    ! x, y, and z grid dimensions
 integer :: nxy              ! number of grid points in a horizontal plane
 integer :: nscalars         !Number of scalars
 integer :: stat
-integer(I4P):: N
+integer(I4P):: N, mode
 
 real :: xl, yl, zl          ! x, y, and z domain sizes
 real :: dx, dy, dz          ! x, y, and z grid lengths
@@ -1531,6 +1529,11 @@ open(unit=65,file="commands.txt")
 			process = 'PODOUT'
 			fileName = 'POD_M'
 			extension = '.PODOUT'
+            
+        else if(input == 5) then
+			process = 'rPODOUT'
+			fileName = 'POD_M'
+			extension = '.PODOUT'
 		end if
 	
 	
@@ -1556,10 +1559,19 @@ open(unit=65,file="commands.txt")
 	!get step increment
 	read(65, FI4P) incr
 		write(cincr,'(i0)') incr
+        
+    ! read the mode if applicable
+    if(trim(adjustl(process))=="rPODOUT") then
+        read(65, FI4P) mode
+    end if
 
 close(65)
 
-call CreateFileList(low,high,incr,fileName,extension)
+if(trim(adjustl(process))=="rPODOUT") then
+    call CreateFileListRPODOUT(low,high,incr,fileName,extension,mode)
+else
+    call CreateFileList(low,high,incr,fileName,extension)
+end if
 
 !--------------------------------------------------------------------------------------------------------------------------------
 ! Populate field list
@@ -1571,6 +1583,8 @@ read(75,*,iostat=stat) buffer
 
 if(trim(adjustl(process)) == "PODIN") then
     call PODIN_to_VTR(formOut)
+else if(trim(adjustl(process))=="rPODOUT") then
+    call PODOUT_to_VTR(formOut)
 else if(trim(adjustl(process)) == "PODOUT") then
     call PODOUT_to_VTR(formOut)
 else if(trim(adjustl(process)) == "cPODIN") then
