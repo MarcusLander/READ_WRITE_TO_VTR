@@ -1,5 +1,20 @@
+module STRING_FUNCS
+implicit none
+contains
+
+    function stringTrunc(strIn) result (strOut)
+        character(len=*), intent(IN):: strIn
+        character(len=len(trim(adjustl(strIn)))) :: strOut
+        
+        strOut = trim(adjustl(strIn))
+        return
+    end function
+    
+end module
+    
 module LIB_VTK_IO
 !----------------------------------------------------------------------------------------------------------------------------------
+use STRING_FUNCS
 implicit none
 private
 
@@ -9,9 +24,11 @@ public:: VTK_GEO_XML
 public:: VTK_DAT_XML
 public:: VTK_VAR_XML
 public:: VTK_END_XML
+public:: Determine_Mode
 public:: write_VTR
 public:: PODIN_to_VTR
 public:: PODOUT_to_VTR
+public:: FIELD_to_VTR
 public:: FIELD_to_PODIN
 public:: PIV_to_VTR
 public:: PIV_to_PODIN
@@ -844,7 +861,7 @@ contains
         integer(kind = 4) :: iErr = 0 !To store the output of each VTK_LIB_IO command
         
         write(fchar, '(I4)')fcounter
-        iErr = VTK_INI_XML(output_format = trim(adjustl(formOut)), filename = trim(adjustl(fileName))//'.vtr', &
+        iErr = VTK_INI_XML(output_format = stringTrunc(formOut), filename = stringTrunc(fileName)//'.vtr', &
 		        mesh_topology = 'RectilinearGrid', nx1=1, nx2=nnx, ny1=1, ny2=nny, nz1=1, nz2=nnz)
         
         iErr = VTK_GEO_XML(nx1=1, nx2=nnx, ny1=1, ny2=nny, nz1=1, nz2=nnz, X=xArr, Y=yArr, Z=zArr)
@@ -944,11 +961,11 @@ contains
     
         do while (stat .eq. 0)
         
-            fileName = buffer(1:index(trim(adjustl(buffer)),'.PODIN')-1)
+            fileName = buffer(1:index(stringTrunc(buffer),'.PODIN')-1)
         
             fcounter = fcounter + 1
             write(fchar,'(I4)') fcounter
-            open(unit=12,file=trim(adjustl(buffer)))
+            open(unit=12,file=stringTrunc(buffer))
             ! eventually this will change to:
             ! open(unit=10,file="POD_"//trim(adjustl(fchar))//".PODIN")
         
@@ -1044,11 +1061,11 @@ contains
     
         do while (stat .eq. 0)
         
-            fileName = buffer(1:index(trim(adjustl(buffer)),'.PODIN')-1)
+            fileName = buffer(1:index(stringTrunc(buffer),'.PODIN')-1)
         
             fcounter = fcounter + 1
             write(fchar,'(I4)') fcounter
-            open(unit=12,file=trim(adjustl(buffer)))
+            open(unit=12,file=stringTrunc(buffer))
             ! eventually this will change to:
             ! open(unit=10,file="POD_"//trim(adjustl(fchar))//".PODIN")
         
@@ -1150,12 +1167,12 @@ contains
             fcounter = fcounter + 1
             write(fchar,'(i0)') fcounter
             
-            buffer = trim(buffer)//' '//buffer(1:index(trim(adjustl(buffer)),'.dat')-1)//'('//trim(fchar)//').dat'
+            buffer = trim(buffer)//' '//buffer(1:index(stringTrunc(buffer),'.dat')-1)//'('//trim(fchar)//').dat'
             
-            fileName = buffer(1:index(trim(adjustl(buffer)),'.dat')-1)
+            fileName = buffer(1:index(stringTrunc(buffer),'.dat')-1)
             
             write(fchar,'(I4)') fcounter
-            open(unit=12,file=trim(adjustl(buffer)))
+            open(unit=12,file=stringTrunc(buffer))
             ! eventually this will change to:
             ! open(unit=10,file="POD_"//trim(adjustl(fchar))//".PODIN")
         
@@ -1163,9 +1180,9 @@ contains
             read(12,'(a)') Buffer, Buffer, Buffer
         
             ! read in the grid size
-            locate = (index(trim(adjustl(buffer)),'I=')+2)
-            read(buffer((index(trim(adjustl(buffer)),'I=')+2):len(buffer)),'(I4P)') nnx
-            read(buffer((index(trim(adjustl(buffer)),'J=')+2):len(buffer)),'(I4P)') nny
+            locate = (index(stringTrunc(buffer),'I=')+2)
+            read(buffer((index(stringTrunc(buffer),'I=')+2):len(buffer)),'(I4P)') nnx
+            read(buffer((index(stringTrunc(buffer),'J=')+2):len(buffer)),'(I4P)') nny
             !read(12,'(I4)') nnz
             nnz=1
         
@@ -1262,10 +1279,10 @@ contains
             
             ! buffer = trim(buffer)//' '//buffer(1:index(trim(adjustl(buffer)),'.dat')-1)//'('//trim(fchar)//').dat'
             
-            fileName = buffer(1:index(trim(adjustl(buffer)),'.dat')-1)//'.PODIN'
+            fileName = buffer(1:index(stringTrunc(buffer),'.dat')-1)//'.PODIN'
             
             write(fchar,'(I4)') fcounter
-            open(unit=12,file=trim(adjustl(buffer)))
+            open(unit=12,file=stringTrunc(buffer))
             ! eventually this will change to:
             ! open(unit=10,file="POD_"//trim(adjustl(fchar))//".PODIN")
         
@@ -1273,9 +1290,9 @@ contains
             read(12,'(a)') Buffer, Buffer, Buffer
         
             ! read in the grid size
-            locate = (index(trim(adjustl(buffer)),'I=')+2)
-            read(buffer((index(trim(adjustl(buffer)),'I=')+2):len(buffer)),'(I4P)') nnx
-            read(buffer((index(trim(adjustl(buffer)),'J=')+2):len(buffer)),'(I4P)') nny
+            locate = (index(stringTrunc(buffer),'I=')+2)
+            read(buffer((index(stringTrunc(buffer),'I=')+2):len(buffer)),'(I4P)') nnx
+            read(buffer((index(stringTrunc(buffer),'J=')+2):len(buffer)),'(I4P)') nny
             !read(12,'(I4)') nnz
             nnz=1
             
@@ -1396,11 +1413,11 @@ contains
     
     do while (stat .eq. 0)
         
-        fileName = buffer(1:index(trim(adjustl(buffer)),'.PODOUT')-1)
+        fileName = buffer(1:index(stringTrunc(buffer),'.PODOUT')-1)
         
         !write(*,*)"POD_M"//trim(adjustl(fchar))//".PODOUT"
         !open(unit=10,file="POD_M"//trim(adjustl(fchar))//".PODOUT")
-        open(unit=12,file=trim(adjustl(buffer)))
+        open(unit=12,file=stringTrunc(buffer))
         
         !read and open based on old title format
         !write(*,*)"POD_M"//trim(adjustl(modes))//"_output"//trim(adjustl(fchar))//".PODOUT"
@@ -1501,11 +1518,11 @@ contains
     
     do while (stat .eq. 0)
         
-        fileName = buffer(1:index(trim(adjustl(buffer)),'.PODOUT')-1)
+        fileName = buffer(1:index(stringTrunc(buffer),'.PODOUT')-1)
         
         !write(*,*)"POD_M"//trim(adjustl(fchar))//".PODOUT"
         !open(unit=10,file="POD_M"//trim(adjustl(fchar))//".PODOUT")
-        open(unit=12,file=trim(adjustl(buffer)))
+        open(unit=12,file=stringTrunc(buffer))
         
         !read and open based on old title format
         !write(*,*)"POD_M"//trim(adjustl(modes))//"_output"//trim(adjustl(fchar))//".PODOUT"
@@ -1515,8 +1532,8 @@ contains
         read(12,'(a)') Buffer, Buffer, Buffer
         
         ! read in the grid size
-        read(buffer((index(trim(adjustl(buffer)),'I=')+2):len(buffer)),'(I4P)') nnx
-        read(buffer((index(trim(adjustl(buffer)),'J=')+2):len(buffer)),'(I4P)') nny
+        read(buffer((index(stringTrunc(buffer),'I=')+2):len(buffer)),'(I4P)') nnx
+        read(buffer((index(stringTrunc(buffer),'J=')+2):len(buffer)),'(I4P)') nny
         nnz = 1
         
         if(.not.(allocated(xArr)) .or. .not.(allocated(yArr)) .or. &
@@ -1547,6 +1564,197 @@ contains
         
     end do
     
+    end subroutine
+    
+    subroutine FIELD_to_VTR(formOut)
+        !This program reads the files that contain the 3d data (velocity, pressure, scalars) in the ".field" files and puts them into a tecplot file for visualization.
+        implicit none
+
+        character *100 :: buffer  ! A character buffer to read input argument
+        character *10  :: formOut ! The form the user chooses to output the data, as determined by input_VTR_POD and input_ASCII_BINARY
+        character *40  :: fchar
+        character*20   :: fileName
+
+        !character truncName*50, fchar*40
+        integer :: i,j,k,fcounter !Counter variables
+        integer :: iz
+
+        ! GRID PARAMETERS
+        integer :: nnx, nny, nnz    ! x, y, and z grid dimensions 
+        integer :: nxy              ! number of grid points in a horizontal plane
+        integer :: nscalars         !Number of scalars
+        integer :: stat
+        integer(I4P):: N
+
+        real :: xl, yl, zl          ! x, y, and z domain sizes
+        real :: dx, dy, dz          ! x, y, and z grid lengths
+        real :: ugtop, ugbot, vgtop, vgbot
+        real :: divgls, fcor, amonin, utau
+        real :: time_start, dt, z0
+        real :: ugal, vgal
+        real :: pi = 3.14159265358979
+
+        real(kind=8), allocatable, dimension(:)  :: xArr, yArr,zArr !Array of x and y locations on the grid
+        real(kind=4), allocatable, dimension(:)  :: uWrite,vWrite,wWrite,tWrite,phiWrite !Plane Arrays in the format to be written into vtr files
+        real(kind=4), allocatable, dimension(:)  :: uWriteNorm,vWriteNorm,wWriteNorm,tWriteNorm,phiWriteNorm !Plane Arrays in the format to be written into vtr files
+        real(I4P),    allocatable, dimension(:,:):: Uf, UTU, UfTrans
+
+        real, allocatable, dimension(:,:,:) :: u,v,w,t,e,p,q,c,phi
+        real, allocatable, dimension(:,:,:) :: up, wp, vp, tp, phip
+        real, allocatable, dimension(:,:,:) :: upnorm, wpnorm, vpnorm, tpnorm, phipnorm
+        real, allocatable, dimension(:,:)   :: velMean
+        real, allocatable, dimension(:)     :: TMean, phiMean,varwp,varup,varvp,vartp,varphip
+        real(I4P)                               :: meanUf
+
+        nscalars = 6
+        N=0
+    
+        fcounter = 0
+        open(unit=75,file="FileList.txt")
+        read(75,*,iostat=stat) buffer
+    
+        open(unit=50,file=buffer,form="unformatted")
+        read(50) time_start, nnx, nny, nnz, xl, yl, zl
+        read(50) dt, z0, utau
+        read(50) divgls, fcor, ugtop, ugbot, vgtop, vgbot
+        close(50)
+        dx = xl/nnx
+        dy = yl/nny
+        dz = zl/nnz
+
+        ! calculate x, y and z locations of the grid
+        allocate(xArr(nnx))
+        allocate(yArr(nny))
+        allocate(zArr(nnz))
+        do i=1,nnx
+            xArr(i) = dble(i-1)*dx
+            yArr(i) = dble(i-1)*dy
+        end do
+        do k=1,nnz
+            zArr(k) = dble(k-1)*dz
+        end do
+
+        allocate(uWrite(nnx*nny*nnz))
+        allocate(vWrite(nnx*nny*nnz))
+        allocate(wWrite(nnx*nny*nnz)) 
+        allocate(tWrite(nnx*nny*nnz)) 
+        allocate(phiWrite(nnx*nny*nnz)) 
+
+        !allocate(uWriteNorm(nnx*nny*nnz))
+        !allocate(vWriteNorm(nnx*nny*nnz))
+        !allocate(wWriteNorm(nnx*nny*nnz)) 
+        !!allocate(tWriteNorm(nnx*nny*nnz)) 
+        !!allocate(phiWriteNorm(nnx*nny*nnz))
+
+        allocate(u(nnx,nny,nnz))
+        allocate(v(nnx,nny,nnz))
+        allocate(w(nnx,nny,nnz))
+        allocate(t(nnx,nny,nnz))
+        allocate(e(nnx,nny,nnz))
+        allocate(p(nnx,nny,nnz))
+        allocate(phi(nnx,nny,nnz))
+
+        allocate(up(nnx,nny,nnz))
+        allocate(vp(nnx,nny,nnz))
+        allocate(wp(nnx,nny,nnz))
+        allocate(tp(nnx,nny,nnz))
+        allocate(phip(nnx,nny,nnz))
+
+        allocate(upnorm(nnx,nny,nnz))
+        allocate(vpnorm(nnx,nny,nnz))
+        allocate(wpnorm(nnx,nny,nnz))
+        allocate(tpnorm(nnx,nny,nnz))
+        allocate(phipnorm(nnx,nny,nnz))
+
+        allocate(velMean(nnz,3))
+        allocate(TMean(nnz))
+        allocate(phiMean(nnz))
+        allocate(varwp(nnz))
+        allocate(varup(nnz))
+        allocate(varvp(nnz))
+        allocate(vartp(nnz))
+        allocate(varphip(nnz))
+
+        write(*,*) 'allocated all memory'
+
+        !*****************************************************BEGIN READING FILES
+
+        do while (stat .eq. 0) 
+        
+            fileName = buffer(1:index(stringTrunc(buffer),'.field')-1)
+        
+            fcounter = fcounter + 1
+
+            open(unit=50,file=buffer,form="unformatted")
+            read(50) time_start, nnx, nny, nnz, xl, yl, zl
+            read(50) dt, z0, utau
+            read(50) divgls, fcor, ugtop, ugbot, vgtop, vgbot
+
+            !print*,'time start is ', time_start
+            !print*,'time step is', dt
+    
+            nxy = nnx*nny
+        
+            ugal = (max(0.,max(ugtop,ugbot))+min(0.,min(ugtop,ugbot)))*0.5
+            vgal = (max(0.,max(vgtop,vgbot))+min(0.,min(vgtop,vgbot)))*0.5
+
+            do iz=1,nnz
+                    read(50) u(:,:,iz), v(:,:,iz), w(:,:,iz), e(:,:,iz), p(1:nnx,1:nny,iz)
+            end do
+    
+            close(50)
+
+            u = u + ugal
+            v = v + vgal
+        
+            ! calculate flow angle at every location
+            do k = 1,nnz
+                do j= 1,nny
+                    do i=1,nnx
+            !	flowangle(i,j,k,fcounter)=atan(v(i,j,k)/u(i,j,k))*(180.0/pi)
+	            phi(i,j,k)=atan(v(i,j,k)/u(i,j,k))*(180.0/pi)
+                    enddo
+                enddo
+            enddo
+            
+            write(*,*) 'file counter is ',fcounter
+
+
+            !--------------------------------------------------------------------------------------------------------------------------------
+            ! convert u to the proper VTR format and plug into uWrite
+            !--------------------------------------------------------------------------------------------------------------------------------
+            do k=1,nnz
+                do j = 1, nny
+                do i = 1, nnx
+                    uWrite((k-1)*nnx*nny+(j-1)*nnx+i) = u(i,j,k)
+                end do
+                end do
+            end do
+       
+            do k=1,nnz
+                do j = 1, nny
+                do i = 1, nnx
+                    vWrite((k-1)*nnx*nny+(j-1)*nnx+i) = v(i,j,k)
+                end do
+                end do
+            end do
+       
+            do k=1,nnz
+                do j = 1, nny
+                do i = 1, nnx
+                    wWrite((k-1)*nnx*nny+(j-1)*nnx+i) = w(i,j,k)
+                end do
+                end do
+            end do
+    
+            call write_VTR(formOut,fcounter,nnx,nny,nnz,xArr,yArr,zArr,uWrite,vWrite,wWrite,uWriteNorm,vWriteNorm,wWriteNorm,fileName)
+
+            write(*,*)''
+            !##########################################################
+            read(75,*,iostat=stat)buffer
+    
+        end do
+        close(75)
     end subroutine
     
     subroutine FIELD_to_PODIN
@@ -1822,9 +2030,123 @@ contains
     
     end subroutine
     
+    subroutine Determine_Mode(input, process, fileName, extension, formOut, low, clow, high, chigh, incr, cincr, mode)
+        character*10:: formOut, extension
+        character*15:: process
+        character*20:: clow, chigh, cincr, fileName
+        
+        integer low, high, incr, input, mode
+        
+        open(unit=65,file="commands.txt")
+	
+	    ! determine output mode
+	    read(65,FI4P) input
+		    ! input = 1 -> *.field to *.VTR
+            ! input = 2 -> *.field to *.PODIN
+		    ! input = 3 -> *.PODIN to *.VTR
+		    ! input = 4 -> *.PODOUT to *.VTR    (PODOUT as a Single Mode)
+            ! input = 5 -> *.PODOUT to *.VTR    (PODOUT as Reconstructed)
+            ! input = 6 -> *.dat to *.VTR       (2D-PIV to 2D-VTR format)
+            ! input = 7 -> *.dat to *.PODIN     (2D-PIV to 2D-PODIN format)
+            ! input = 8 -> *.PODIN to *.VTR     (2D-PODIN to 2D-VTR)
+            ! input = 9 -> *.dat to *.VTR       (2D-PODOUT to 2D-VTR)
+            ! input = 10 -> *.dat to *.VTR      (2D-PODOUT as a Single Mode)
+            
+		    select case (input)
+                case (1)
+			        process = 'FIELD'
+			        fileName = 'test'
+			        extension = '.field'
+		
+                case (2)
+			        process = 'cPODIN'
+			        fileName = 'test'
+			        extension = '.field'
+            
+                case (3)
+			        process = 'PODIN'
+			        fileName = 'POD_input'
+			        extension = '.PODIN'
+		
+                case (4)
+                    process = 'PODOUT'
+			        fileName = 'POD_M'
+			        extension = '.PODOUT'
+            
+                case (5)
+			        process = 'rPODOUT'
+			        fileName = 'POD_M'
+			        extension = '.PODOUT'
+
+                case (6)
+			        process = 'PIVVTR'
+			        !fileName = 'PIV_input'
+                    fileName = 'Input ('
+			        extension = ').dat'
+            
+                case (7)
+                    process = 'PIVPODIN'
+                    fileName = 'PIV_input'
+                    extension = '.dat'
+            
+                case (8)
+                    process = 'PIVPODINVTR'
+                    fileName = 'PIV_input'
+                    extension = '.PODIN'
+            
+                case (9)
+                    process = 'PIVPODOUTVTR'
+                    fileName = 'POD_M'
+                    extension = '.PODOUT'
+            
+                case (10)
+                    process = 'rPIVPODOUTVTR'
+                    fileName = 'POD_M'
+                    extension = '.PODOUT'
+                
+                case default
+                    ! if it reached this point, there was an error.
+                    ! Tell the user, and prep to quit
+                    write(*,*) "Error... not a valid input"
+                    stop
+            end select
+	
+	    ! determine output type
+	    read(65,FI4P) input
+		    ! input = 1 -> ASCII
+		    ! input = 2 -> binary
+	
+		    if(input == 1) then
+			    formOut = 'ascii'
+		    else if (input == 2) then
+			    formOut = 'binary'
+		    end if
+	
+	    ! get lower range
+	    read(65,FI4P) low
+		    write(clow,'(i0)') low
+	
+	    ! get upper range
+	    read(65, FI4P) high
+		    write(chigh,'(i0)') high
+	
+	    !get step increment
+	    read(65, FI4P) incr
+		    write(cincr,'(i0)') incr
+        
+        ! read the mode if applicable
+        if(stringTrunc(process)=="rPODOUT" .or. stringTrunc(process)=="rPIVPODOUTVTR") then
+            read(65, FI4P) mode
+        end if
+
+    close(65)
+        
+    end subroutine
 endmodule LIB_VTK_IO
 
 module CREATE_LIST
+use STRING_FUNCS
+
 public:: CreateFileList
 public:: CreateFileListRPODOUT
 public:: CreateFieldPodInFileList
@@ -1843,7 +2165,7 @@ contains
         open(unit=9,file="FileList.txt")
         
         do i=low,high,incr
-            write(9,'(a,i0,a)') trim(adjustl(fileName)), i ,trim(adjustl(extension))
+            write(9,'(a,i0,a)') stringTrunc(fileName), i,stringTrunc(extension)
         end do
         
         close(9)
@@ -1863,7 +2185,7 @@ contains
         open(unit=9,file="FileList.txt")
         
         do i=low,high,incr
-            write(9,'(a,i0,a,i0,a)') trim(adjustl(fileName)),mode,'_output',i ,trim(adjustl(extension))
+            write(9,'(a,i0,a,i0,a)') stringTrunc(fileName),mode,'_output',i,stringTrunc(extension)
         end do
         
         close(9)
@@ -1883,7 +2205,7 @@ contains
         open(unit=9,file="FileList.txt")
         
         do i=low,high,1
-            write(9,'(a,i0,a)') trim(adjustl(fileName)),i,trim(adjustl(extension))
+            write(9,'(a,i0,a)') stringTrunc(fileName),i,stringTrunc(extension)
         end do
         
         close(9)
@@ -1909,481 +2231,57 @@ contains
 endmodule CREATE_LIST
 
 program read_write_3d_filter
+use STRING_FUNCS
 use LIB_VTK_IO
 use CREATE_LIST
 
-!This program reads the files that contain the 3d data (velocity, pressure, scalars) in the ".field" files and puts them into a tecplot file for visualization.
 implicit none
 
-character *100 :: buffer  ! A character buffer to read input argument
-character *10  :: formOut ! The form the user chooses to output the data, as determined by input_VTR_POD and input_ASCII_BINARY
-character *40  :: fchar
+character *100  :: buffer  ! A character buffer to read input argument
+character *10   :: formOut, extension ! The form the user chooses to output the data, as determined by input_VTR_POD and input_ASCII_BINARY
+character *40   :: fchar
 character *15   :: process
-character*20   :: clow,chigh,cincr,filename
-character*10 :: extension
+character *20   :: clow,chigh,cincr,fileName
 
-integer      :: low,high,incr     ! the lower and upper address ranges used to populate the list of files
-integer :: input 
-
-!character truncName*50, fchar*40
-integer :: i,j,k,fcounter !Counter variables
-integer :: iz
-
-! GRID PARAMETERS
-integer :: nnx, nny, nnz    ! x, y, and z grid dimensions 
-integer :: nxy              ! number of grid points in a horizontal plane
-integer :: nscalars         !Number of scalars
-integer :: stat
-integer(I4P):: N, mode
-
-real :: xl, yl, zl          ! x, y, and z domain sizes
-real :: dx, dy, dz          ! x, y, and z grid lengths
-real :: ugtop, ugbot, vgtop, vgbot
-real :: divgls, fcor, amonin, utau
-real :: time_start, dt, z0
-real :: ugal, vgal
-real :: pi = 3.14159265358979
-
-real(kind=8), allocatable, dimension(:)  :: xArr, yArr,zArr !Array of x and y locations on the grid
-real(kind=4), allocatable, dimension(:)  :: uWrite,vWrite,wWrite,tWrite,phiWrite !Plane Arrays in the format to be written into vtr files
-real(kind=4), allocatable, dimension(:)  :: uWriteNorm,vWriteNorm,wWriteNorm,tWriteNorm,phiWriteNorm !Plane Arrays in the format to be written into vtr files
-real(I4P),    allocatable, dimension(:,:):: Uf, UTU, UfTrans
-
-real, allocatable, dimension(:,:,:) :: u,v,w,t,e,p,q,c,phi
-real, allocatable, dimension(:,:,:) :: up, wp, vp, tp, phip
-real, allocatable, dimension(:,:,:) :: upnorm, wpnorm, vpnorm, tpnorm, phipnorm
-real, allocatable, dimension(:,:)   :: velMean
-real, allocatable, dimension(:)     :: TMean, phiMean,varwp,varup,varvp,vartp,varphip
-real(I4P)                               :: meanUf
-
-nscalars = 6
-N=0
+integer         :: low,high,incr     ! the lower and upper address ranges used to populate the list of files
+integer         :: input, mode
 
 !--------------------------------------------------------------------------------------------------------------------------------
-! Ask the user what kind of data they want to output
+! Read in the Command Flags from commands.txt
 !--------------------------------------------------------------------------------------------------------------------------------
+call Determine_Mode(input, process, fileName, extension, formOut, low, clow, high, chigh, incr, cincr, mode)
 
-open(unit=65,file="commands.txt")
-	
-	! determine output mode
-	read(65,FI4P) input
-		! input = 1 -> *.field to *.VTR
-        ! input = 2 -> *.field to *.PODIN
-		! input = 3 -> *.PODIN to *.VTR
-		! input = 4 -> *.PODOUT to *.VTR    (PODOUT as a Single Mode)
-        ! input = 5 -> *.PODOUT to *.VTR    (PODOUT as Reconstructed)
-        ! input = 6 -> *.dat to *.VTR       (2D-PIV to 2D-VTR format)
-		
-		if(input == 1) then
-			process = 'FIELD'
-			fileName = 'test'
-			extension = '.field'
-		
-        else if(input == 2) then
-			process = 'cPODIN'
-			fileName = 'test'
-			extension = '.field'
-            
-		else if(input == 3) then
-			process = 'PODIN'
-			fileName = 'POD_input'
-			extension = '.PODIN'
-		
-		else if(input == 4) then
-			process = 'PODOUT'
-			fileName = 'POD_M'
-			extension = '.PODOUT'
-            
-        else if(input == 5) then
-			process = 'rPODOUT'
-			fileName = 'POD_M'
-			extension = '.PODOUT'
-
-        else if(input == 6) then
-			process = 'PIVVTR'
-			!fileName = 'PIV_input'
-            fileName = 'Input ('
-			extension = ').dat'
-            
-        else if(input == 7) then
-            process = 'PIVPODIN'
-            fileName = 'PIV_input'
-            extension = '.dat'
-            
-        else if(input == 8) then
-            process = 'PIVPODINVTR'
-            fileName = 'PIV_input'
-            extension = '.PODIN'
-            
-        else if(input == 9) then
-            process = 'PIVPODOUTVTR'
-            fileName = 'POD_M'
-            extension = '.PODOUT'
-            
-        else if(input == 10) then
-            process = 'rPIVPODOUTVTR'
-            fileName = 'POD_M'
-            extension = '.PODOUT'
-		end if
-	
-	! determine output type
-	read(65,FI4P) input
-		! input = 1 -> ASCII
-		! input = 2 -> binary
-	
-		if(input == 1) then
-			formOut = 'ascii'
-		else if (input == 2) then
-			formOut = 'binary'
-		end if
-	
-	! get lower range
-	read(65,FI4P) low
-		write(clow,'(i0)') low
-	
-	! get upper range
-	read(65, FI4P) high
-		write(chigh,'(i0)') high
-	
-	!get step increment
-	read(65, FI4P) incr
-		write(cincr,'(i0)') incr
-        
-    ! read the mode if applicable
-    if(trim(adjustl(process))=="rPODOUT" .or. trim(adjustl(process))=="rPIVPODOUTVTR") then
-        read(65, FI4P) mode
-    end if
-
-close(65)
-
-if(trim(adjustl(process))=="rPODOUT") then
+!--------------------------------------------------------------------------------------------------------------------------------
+! Populate file list
+!--------------------------------------------------------------------------------------------------------------------------------
+if(stringTrunc(process)=="rPODOUT" .or. stringTrunc(process)=="rPIVPODOUTVTR") then
     call CreateFileListRPODOUT(low,high,incr,fileName,extension,mode)
 else
     call CreateFileList(low,high,incr,fileName,extension)
 end if
 
-!--------------------------------------------------------------------------------------------------------------------------------
-! Populate field list
-!--------------------------------------------------------------------------------------------------------------------------------
-
-fcounter = 0
-open(unit=75,file="FileList.txt")
-read(75,*,iostat=stat) buffer
-
-if(trim(adjustl(process)) == "PODIN") then
-    call PODIN_to_VTR(formOut)
-else if(trim(adjustl(process))=="rPODOUT") then
-    call PODOUT_to_VTR(formOut)
-else if(trim(adjustl(process)) == "PODOUT") then
-    call PODOUT_to_VTR(formOut)
-else if(trim(adjustl(process)) == "cPODIN") then
-    call FIELD_to_PODIN
-else if(trim(adjustl(process)) == "PIVVTR") then
-    call PIV_to_VTR(formOut)
-else if(trim(adjustl(process)) == "PIVPODIN") then
-    call PIV_to_PODIN(formOut)
-else if(trim(adjustl(process)) == "PIVPODINVTR") then
-    call PODIN_to_VTR2D(formOut)
-else if(trim(adjustl(process)) == "PIVPODOUTVTR") then
-    call PODOUT_to_VTR2D(formOut)
-else if(trim(adjustl(process)) == "FIELD") then
-    
-    open(unit=50,file=buffer,form="unformatted")
-    read(50) time_start, nnx, nny, nnz, xl, yl, zl
-    read(50) dt, z0, utau
-    read(50) divgls, fcor, ugtop, ugbot, vgtop, vgbot
-    close(50)
-    dx = xl/nnx
-    dy = yl/nny
-    dz = zl/nnz
-
-    ! calculate x, y and z locations of the grid
-    allocate(xArr(nnx))
-    allocate(yArr(nny))
-    allocate(zArr(nnz))
-    do i=1,nnx
-        xArr(i) = dble(i-1)*dx
-        yArr(i) = dble(i-1)*dy
-    end do
-    do k=1,nnz
-        zArr(k) = dble(k-1)*dz
-    end do
-
-    allocate(uWrite(nnx*nny*nnz))
-    allocate(vWrite(nnx*nny*nnz))
-    allocate(wWrite(nnx*nny*nnz)) 
-    allocate(tWrite(nnx*nny*nnz)) 
-    allocate(phiWrite(nnx*nny*nnz)) 
-
-    !allocate(uWriteNorm(nnx*nny*nnz))
-    !allocate(vWriteNorm(nnx*nny*nnz))
-    !allocate(wWriteNorm(nnx*nny*nnz)) 
-    !!allocate(tWriteNorm(nnx*nny*nnz)) 
-    !!allocate(phiWriteNorm(nnx*nny*nnz))
-
-    allocate(u(nnx,nny,nnz))
-    allocate(v(nnx,nny,nnz))
-    allocate(w(nnx,nny,nnz))
-    allocate(t(nnx,nny,nnz))
-    allocate(e(nnx,nny,nnz))
-    allocate(p(nnx,nny,nnz))
-    allocate(phi(nnx,nny,nnz))
-
-    allocate(up(nnx,nny,nnz))
-    allocate(vp(nnx,nny,nnz))
-    allocate(wp(nnx,nny,nnz))
-    allocate(tp(nnx,nny,nnz))
-    allocate(phip(nnx,nny,nnz))
-
-    allocate(upnorm(nnx,nny,nnz))
-    allocate(vpnorm(nnx,nny,nnz))
-    allocate(wpnorm(nnx,nny,nnz))
-    allocate(tpnorm(nnx,nny,nnz))
-    allocate(phipnorm(nnx,nny,nnz))
-
-    allocate(velMean(nnz,3))
-    allocate(TMean(nnz))
-    allocate(phiMean(nnz))
-    allocate(varwp(nnz))
-    allocate(varup(nnz))
-    allocate(varvp(nnz))
-    allocate(vartp(nnz))
-    allocate(varphip(nnz))
-
-    write(*,*) 'allocated all memory'
-
-    !*****************************************************BEGIN READING FILES
-
-    do while (stat .eq. 0) 
-        
-        fileName = buffer(1:index(trim(adjustl(buffer)),'.field')-1)
-        
-        fcounter = fcounter + 1
-
-        open(unit=50,file=buffer,form="unformatted")
-        read(50) time_start, nnx, nny, nnz, xl, yl, zl
-        read(50) dt, z0, utau
-        read(50) divgls, fcor, ugtop, ugbot, vgtop, vgbot
-
-        !print*,'time start is ', time_start
-        !print*,'time step is', dt
-    
-        nxy = nnx*nny
-        
-        ugal = (max(0.,max(ugtop,ugbot))+min(0.,min(ugtop,ugbot)))*0.5
-        vgal = (max(0.,max(vgtop,vgbot))+min(0.,min(vgtop,vgbot)))*0.5
-
-        do iz=1,nnz
-             read(50) u(:,:,iz), v(:,:,iz), w(:,:,iz), e(:,:,iz), p(1:nnx,1:nny,iz)
-        end do
-    
-        close(50)
-
-        u = u + ugal
-        v = v + vgal
-        
-        ! calculate flow angle at every location
-        do k = 1,nnz
-           do j= 1,nny
-             do i=1,nnx
-        !	flowangle(i,j,k,fcounter)=atan(v(i,j,k)/u(i,j,k))*(180.0/pi)
-	        phi(i,j,k)=atan(v(i,j,k)/u(i,j,k))*(180.0/pi)
-             enddo
-           enddo
-        enddo
-        
-!--------------------------------------------------------------------------------------------------------------------------------
-! I think this is where it takes the mean out
-!--------------------------------------------------------------------------------------------------------------------------------
-        !! I think this is where it takes the mean out
-        !do iz=1,nnz
-        !   velMean(iz,1) = sum(u(:,:,iz))/real(nxy)
-        !   velMean(iz,2) = sum(v(:,:,iz))/real(nxy)
-        !   velMean(iz,3) = sum(w(:,:,iz))/real(nxy)
-        !   !TMean(iz) = sum(t(:,:,iz))/real(nxy)
-        !   phiMean(iz) = sum(phi(:,:,iz))/real(nxy)
-        !   !write(*,*) iz, ' ',  velmean(iz,1)!, ' ', countCond(1,1)/real(nxy)
-        !end do
-        
-        write(*,*) 'file counter is ',fcounter
-
-        !! calculate up,vp,wp
-        !do k = 1,nnz
-        !   varwp(k)=0.0
-        !   varup(k)=0.0
-        !   varvp(k)=0.0
-        !   vartp(k)=0.0
-        !   varphip(k)=0.0
-        !   do j= 1,nny
-        !     do i=1,nnx
-	       ! up(i,j,k)=u(i,j,k)-velMean(k,1)
-	       ! vp(i,j,k)=v(i,j,k)-velMean(k,2)
-	       ! wp(i,j,k)=w(i,j,k)-velMean(k,3)
-	       ! !tp(i,j,k)=t(i,j,k)-TMean(k)
-	       ! phip(i,j,k)=phi(i,j,k)-phiMean(k)
-	       ! varwp(k)=varwp(k)+(wp(i,j,k)*wp(i,j,k))/(nxy)
-	       ! varup(k)=varup(k)+(up(i,j,k)*up(i,j,k))/(nxy)
-	       ! varvp(k)=varvp(k)+(vp(i,j,k)*vp(i,j,k))/(nxy)
-	       ! !vartp(k)=vartp(k)+(tp(i,j,k)*tp(i,j,k))/(nxy)
-	       ! varphip(k)=varphip(k)+(phip(i,j,k)*phip(i,j,k))/(nxy)
-        !     enddo
-        !   enddo
-        !enddo
-        
-        !do k = 1,nnz
-        !   do j= 1,nny
-        !     do i=1,nnx
-	       ! upnorm(i,j,k)=up(i,j,k)/sqrt(varup(k))
-	       ! vpnorm(i,j,k)=vp(i,j,k)/sqrt(varvp(k))
-	       ! wpnorm(i,j,k)=wp(i,j,k)/sqrt(varwp(k))
-	       ! !tpnorm(i,j,k)=tp(i,j,k)/sqrt(vartp(k))
-	       ! phipnorm(i,j,k)=phip(i,j,k)/sqrt(varphip(k))
-        !
-        !     enddo
-        !   enddo
-        !enddo
-
-!--------------------------------------------------------------------------------------------------------------------------------
-! convert u to the proper VTR format and plug into uWrite
-!--------------------------------------------------------------------------------------------------------------------------------
-       do k=1,nnz
-         do j = 1, nny
-            do i = 1, nnx
-               uWrite((k-1)*nnx*nny+(j-1)*nnx+i) = u(i,j,k)
-            end do
-         end do
-       end do
-       
-       do k=1,nnz
-         do j = 1, nny
-            do i = 1, nnx
-               vWrite((k-1)*nnx*nny+(j-1)*nnx+i) = v(i,j,k)
-            end do
-         end do
-       end do
-       
-       do k=1,nnz
-         do j = 1, nny
-            do i = 1, nnx
-               wWrite((k-1)*nnx*nny+(j-1)*nnx+i) = w(i,j,k)
-            end do
-         end do
-       end do
-
-    !   do k=1,nnz
-    !     do j = 1, nny
-    !        do i = 1, nnx
-    !           tWrite((k-1)*nnx*nny+(j-1)*nnx+i) = tp(i,j,k)
-    !        end do
-    !     end do
-    !   end do
-    !
-    !   do k=1,nnz
-    !     do j = 1, nny
-    !        do i = 1, nnx
-    !           phiWrite((k-1)*nnx*nny+(j-1)*nnx+i) = phip(i,j,k)
-    !        end do
-    !     end do
-    !   end do
-
-
-       !do k=1,nnz
-       !  do j = 1, nny
-       !     do i = 1, nnx
-       !        uWriteNorm((k-1)*nnx*nny+(j-1)*nnx+i) = upnorm(i,j,k)
-       !     end do
-       !  end do
-       !end do
-       !
-       !do k=1,nnz
-       !  do j = 1, nny
-       !     do i = 1, nnx
-       !        vWriteNorm((k-1)*nnx*nny+(j-1)*nnx+i) = vpnorm(i,j,k)
-       !     end do
-       !  end do
-       !end do
-       !
-       !do k=1,nnz
-       !  do j = 1, nny
-       !     do i = 1, nnx
-       !        wWriteNorm((k-1)*nnx*nny+(j-1)*nnx+i) = wpnorm(i,j,k)
-       !     end do
-       !  end do
-       !end do
-
-    !   do k=1,nnz
-    !     do j = 1, nny
-    !        do i = 1, nnx
-    !           tWriteNorm((k-1)*nnx*nny+(j-1)*nnx+i) = tpnorm(i,j,k)
-    !        end do
-    !     end do
-    !   end do
-    !
-    !   do k=1,nnz
-    !     do j = 1, nny
-    !        do i = 1, nnx
-    !           phiWriteNorm((k-1)*nnx*nny+(j-1)*nnx+i) = phipnorm(i,j,k)
-    !        end do
-    !     end do
-    !   end do
-    
-        call write_VTR(formOut,fcounter,nnx,nny,nnz,xArr,yArr,zArr,uWrite,vWrite,wWrite,uWriteNorm,vWriteNorm,wWriteNorm,fileName)
-
-        write(*,*)''
-        !##########################################################
-        read(75,*,iostat=stat)buffer
-    
-    end do
-else if(trim(adjustl(formOut)) == 'POD') then
-        stop
-        !--------------------------------------------------------------------------------------------------------------------------------
-        ! in FORTRAN, arrays are written as someArray[#rows:#columns]
-        !--------------------------------------------------------------------------------------------------------------------------------
-
-        !if(.NOT. allocated(Uf)) then
-        !    allocate(Uf(nnx*nny*nnz*3,150))
-        !    allocate(UfTrans(150,nnx*nny*nnz*3))
-        !end if
-        !
-        !N=N+1
-        !call readField_POD(formOut,fcounter,nnx,nny,nnz,xArr,yArr,zArr,uWrite,vWrite,wWrite,uWriteNorm,vWriteNorm,wWriteNorm,Uf,N)
-end if
-close(75)
+! begin appropriate conversion process
+select case(stringTrunc(process))
+    case ("PODIN")
+        call PODIN_to_VTR(formOut)
+    case("rPODOUT")
+        call PODOUT_to_VTR(formOut)
+    case("PODOUT")
+        call PODOUT_to_VTR(formOut)
+    case("cPODIN")
+        call FIELD_to_PODIN
+    case("PIVVTR")
+        call PIV_to_VTR(formOut)
+    case ("PIVPODIN")
+        call PIV_to_PODIN(formOut)
+    case("PIVPODINVTR")
+        call PODIN_to_VTR2D(formOut)
+    case("PIVPODOUTVTR")
+        call PODOUT_to_VTR2D(formOut)
+    case("FIELD")
+        call FIELD_to_VTR(formOut)
+end select
 !**********************************************************END READING FILES
-
-
-!if(trim(adjustl(formOut)) == 'binary' .OR. trim(adjustl(formOut)) == 'ascii') then
-!    
-!    write(*,*)'End Reading Files'
-!    write(*,*)'Press any button to quit'
-!    read(*,*)
-!    stop
-!    
-!else if(trim(adjustl(formOut)) == 'POD') then
-!    !--------------------------------------------------------------------------------------------------------------------------------
-!    ! Generate the POD analysis here to plug into write_POD
-!    !--------------------------------------------------------------------------------------------------------------------------------
-!
-!    write(*,*)'End Reading Files'
-!    write(*,*)''
-!    write(*,*)'Beginning POD decomposition'
-!    allocate(UTU(N,N))
-!    UfTrans = transpose(Uf)
-!
-!    write(*,*)"Generating UTU Matrix... Please wait... This calculation"
-!    write(*,*)"may take awhile..."
-!
-!    UTU = matmul(UfTrans,Uf)
-!    
-!    call writeMatrix(150,150,UTU)
-!
-!    write(*,*)"UTU array successfully calculated"
-!    meanUf = 0
-!    meanUf = sum (Uf(:,2))
-!
-!    write(*,*)'Press Enter to quit.'
-!    read(*,*)
-!end if
 write(*,*)'End Reading Files'
 
 end program read_write_3d_filter
