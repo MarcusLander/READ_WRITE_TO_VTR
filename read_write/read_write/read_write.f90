@@ -14,6 +14,9 @@ public:: PODIN_to_VTR
 public:: PODOUT_to_VTR
 public:: FIELD_to_PODIN
 public:: PIV_to_VTR
+public:: PIV_to_PODIN
+public:: PODIN_to_VTR2D
+public:: PODOUT_to_VTR2D
 
 ! portable kind-precision
 public:: R16P, FR16P
@@ -987,6 +990,106 @@ contains
     
     endsubroutine PODIN_to_VTR
 
+    subroutine PODIN_to_VTR2D(formOut)
+
+        implicit none
+        
+        !#### Flags getting passed in
+        character*10, intent(IN):: formOut
+
+        !#### Variables dimensions
+        character (len=100) :: Buffer                           !A character Buffer to read input argument
+        character (len=10)  :: xd,yd
+        character*20 :: fileName
+        integer :: i,j,k,keff,fcounter                          !Counter variables
+        integer :: iz									        !counter variables
+        integer :: stat                                         !End of line variable
+        integer :: UnitNum                                      !UnitNum
+        !#### GRID PARAMETERS
+        integer :: nnx, nny, nnz      					        !x, y, and z grid dimensions 
+        integer :: nxy                					        !Number of grid points in a horizontal plane
+        real    :: xl, yl, zl         	  					    ! x, y, and z domain sizes
+        real    :: dx, dy, dz            					    ! x, y, and z grid lengths
+        integer :: nscalars 							        !Number of scalars
+
+        !####Number of z levels used
+        !integer(kind = I4P) :: nnzused                     
+ 
+        real(kind = R8P), dimension(:), allocatable :: xArr, yArr,zArr		                              !Array of x and y locations on the grid	                            						
+        real, allocatable, dimension(:,:,:)         :: u,v,w,t,e,p,q,c,phi                                !Parameter dimension      
+        real, allocatable, dimension(:,:,:)         :: up, wp, vp, tp, phip
+        real, allocatable, dimension(:)             :: TMean, phiMean
+        real, allocatable, dimension(:)             :: varwp,varup,varvp,vartp,varphip
+        real, allocatable, dimension(:,:)           :: velMean
+
+        !Plane Arrays in the format to be written into vec files
+        real(kind= R4P), dimension(:), allocatable  :: uWrite,vWrite,wWrite,tWrite,phiWrite     
+                            	
+        real    :: ugtop, ugbot, vgtop, vgbot
+        real    :: dtdzf, divgls, fcor, amonin, utau
+        real    :: time_start, dt, z0
+        
+        character*40 :: fchar
+        integer :: count
+        
+        real(R4P), allocatable :: uWriteNorm(:)
+        real(R4P), allocatable :: vWriteNorm(:)
+        real(R4P), allocatable :: wWriteNorm(:)
+        
+        !begin looping through all availible POD_in files
+        count = 0
+        fcounter = 0
+        open(unit=10,file="FileList.txt")
+        read(10,*,iostat=stat) buffer
+    
+        do while (stat .eq. 0)
+        
+            fileName = buffer(1:index(trim(adjustl(buffer)),'.PODIN')-1)
+        
+            fcounter = fcounter + 1
+            write(fchar,'(I4)') fcounter
+            open(unit=12,file=trim(adjustl(buffer)))
+            ! eventually this will change to:
+            ! open(unit=10,file="POD_"//trim(adjustl(fchar))//".PODIN")
+        
+            ! quickly read through the header of the file
+            read(12,'(a)') Buffer, Buffer, Buffer, Buffer, Buffer
+        
+            ! read in the grid size
+            read(12,'(I4)') nnx
+            read(12,'(I4)') nny
+            read(12,'(I4)') nnz
+        
+            if(fcounter == 1) then
+                allocate(xArr(nnx))
+                allocate(yArr(nny))
+                allocate(zArr(nnz))        
+                allocate(uWrite(nnx*nny*nnz))
+                allocate(vWrite(nnx*nny*nnz))
+            end if
+        
+            do k=1,nnz
+                do j=1,nny
+                    do i=1,nnx
+                        read(12,*) xArr(i), yArr(j), uWrite((k-1)*nnx*nny+(j-1)*nnx+i), vWrite((k-1)*nnx*nny+(j-1)*nnx+i)
+                        zArr(k) = 0
+                    enddo
+                enddo
+            enddo
+        
+            !convert this PODIN file to *.VTR
+            call write_VTR(formOut,fcounter,nnx,nny,nnz,xArr,yArr,zArr,uWrite,vWrite,wWrite,uWriteNorm,vWriteNorm,wWriteNorm,fileName)
+        
+            close(12)
+            read(10,*,iostat=stat)buffer
+        
+        enddo      
+    
+        close(12)
+        close(10)
+    
+    end subroutine
+    
     subroutine PIV_to_VTR(formOut)
     
         implicit none
@@ -1044,9 +1147,13 @@ contains
     
         do while (stat .eq. 0)
         
-            fileName = buffer(1:index(trim(adjustl(buffer)),'.dat')-1)
-        
             fcounter = fcounter + 1
+            write(fchar,'(i0)') fcounter
+            
+            buffer = trim(buffer)//' '//buffer(1:index(trim(adjustl(buffer)),'.dat')-1)//'('//trim(fchar)//').dat'
+            
+            fileName = buffer(1:index(trim(adjustl(buffer)),'.dat')-1)
+            
             write(fchar,'(I4)') fcounter
             open(unit=12,file=trim(adjustl(buffer)))
             ! eventually this will change to:
@@ -1091,6 +1198,145 @@ contains
     
         close(12)
         close(10)
+    end subroutine
+
+    subroutine PIV_to_PODIN(formOut)
+        
+        implicit none
+        
+        !#### Flags getting passed in
+        character*10, intent(IN):: formOut
+
+        !#### Variables dimensions
+        character (len=100) :: Buffer                           !A character Buffer to read input argument
+        character (len=10)  :: xd,yd
+        character*20 :: fileName
+        integer :: i,j,k,keff,fcounter                          !Counter variables
+        integer :: iz									        !counter variables
+        integer :: stat                                         !End of line variable
+        integer :: UnitNum                                      !UnitNum
+        !#### GRID PARAMETERS
+        integer :: nnx, nny, nnz      					        !x, y, and z grid dimensions 
+        integer :: nxy                					        !Number of grid points in a horizontal plane
+        real    :: xl, yl, zl         	  					    ! x, y, and z domain sizes
+        real    :: dx, dy, dz            					    ! x, y, and z grid lengths
+        integer :: nscalars 							        !Number of scalars
+
+        !####Number of z levels used
+        !integer(kind = I4P) :: nnzused                     
+ 
+        real(kind = R8P), dimension(:), allocatable :: xArr, yArr,zArr		                              !Array of x and y locations on the grid	                            						
+        real, allocatable, dimension(:,:,:)         :: u,v,w,t,e,p,q,c,phi                                !Parameter dimension      
+        real, allocatable, dimension(:,:,:)         :: up, wp, vp, tp, phip
+        real, allocatable, dimension(:)             :: TMean, phiMean
+        real, allocatable, dimension(:)             :: varwp,varup,varvp,vartp,varphip
+        real, allocatable, dimension(:,:)           :: velMean
+
+        !Plane Arrays in the format to be written into vec files
+        real(kind= R4P), dimension(:), allocatable  :: uWrite,vWrite,wWrite,tWrite,phiWrite     
+                            	
+        real    :: ugtop, ugbot, vgtop, vgbot
+        real    :: dtdzf, divgls, fcor, amonin, utau
+        real    :: time_start, dt, z0
+        
+        character*40 :: fchar
+        character*40 :: temp
+        
+        integer :: count
+        integer :: locate
+        
+        real(R4P), allocatable :: uWriteNorm(:)
+        real(R4P), allocatable :: vWriteNorm(:)
+        real(R4P), allocatable :: wWriteNorm(:)
+        
+        !begin looping through all availible POD_in files
+        count = 0
+        fcounter = 0
+        open(unit=10,file="FileList.txt")
+        read(10,*,iostat=stat) buffer
+    
+        do while (stat .eq. 0)
+        
+            fcounter = fcounter + 1
+            write(fchar,'(i0)') fcounter
+            
+            ! buffer = trim(buffer)//' '//buffer(1:index(trim(adjustl(buffer)),'.dat')-1)//'('//trim(fchar)//').dat'
+            
+            fileName = buffer(1:index(trim(adjustl(buffer)),'.dat')-1)//'.PODIN'
+            
+            write(fchar,'(I4)') fcounter
+            open(unit=12,file=trim(adjustl(buffer)))
+            ! eventually this will change to:
+            ! open(unit=10,file="POD_"//trim(adjustl(fchar))//".PODIN")
+        
+            ! quickly read through the header of the file
+            read(12,'(a)') Buffer, Buffer, Buffer
+        
+            ! read in the grid size
+            locate = (index(trim(adjustl(buffer)),'I=')+2)
+            read(buffer((index(trim(adjustl(buffer)),'I=')+2):len(buffer)),'(I4P)') nnx
+            read(buffer((index(trim(adjustl(buffer)),'J=')+2):len(buffer)),'(I4P)') nny
+            !read(12,'(I4)') nnz
+            nnz=1
+            
+            if(fcounter == 1) then
+                allocate(xArr(nnx))
+                allocate(yArr(nny))
+                allocate(zArr(nnz))        
+                allocate(uWrite(nnx*nny*nnz))
+                allocate(vWrite(nnx*nny*nnz))
+                ! allocate(wWrite(nnx*nny*nnz))
+            end if
+        
+            do k=1,nnz
+                do j=1,nny
+                    do i=1,nnx
+                        read(12,*) xArr(i), yArr(j), uWrite((k-1)*nnx*nny+(j-1)*nnx+i), vWrite((k-1)*nnx*nny+(j-1)*nnx+i)
+                        ! wWrite((k-1)*nnx*nny+(j-1)*nnx+i) = 0
+                        zArr(k) = 0
+                    enddo
+                enddo
+            enddo
+            
+            Write(FileName,'(a,I0,a)') 'PIV_input', fcounter, '.PODIN' 
+		    open(unit=11,file=FileName)
+
+
+		    !Write the comment line here
+			    write(11,'(a)',advance='no') 'Title: '
+			    write(11,'(a)') Filename
+			    write(11,'(a)', advance='no') 'VARIABLES= "X","Y", "Vx", "Vy", I='
+			    Write(11,'(i0)', advance='no') nnx
+			    write(11,'(a)', advance='no') ', J='
+			    Write(11,'(i0)', advance='no') nny
+			    Write(11,'(a)', advance='no') ', K='
+			    Write(11,'(i0)') nnz
+			    Write(11,'(a)') 'X,Y: location of the grid point in x,y,z '
+			    write(11,'(a)') 'U,V: three dimensional velocity components'
+			    Write(11,'(a)') 'I,J: number of grid points in x,y,z domain'
+			    Write(11,'(i0)') nnx
+			    Write(11,'(i0)') nny
+			    Write(11,'(i0)') nnz
+
+	
+
+		    do k=1,nnz         
+			    !Write x,y,u,v,and snr here
+			    do j=1,nny
+				    do i=1,nnx
+				    write(11,'(f13.7, f13.7, f13.7, f13.7)')  &
+											    xArr(i), yArr(j), &
+											    uWrite((k-1)*nnx*nny+(j-1)*nnx+i),    &
+											    vWrite((k-1)*nnx*nny+(j-1)*nnx+i)
+											    !wWrite((k-1)*nnx*nny+(j-1)*nnx+i)
+				    end do
+			    end do         
+		    end do 
+            
+            read(10,*,iostat=stat)buffer
+            
+        end do
+    
     end subroutine
     
     subroutine PODOUT_to_VTR(formOut)
@@ -1197,6 +1443,111 @@ contains
     end do
     
     endsubroutine PODOUT_to_VTR
+    
+    subroutine PODOUT_to_VTR2D(formOut)
+
+        implicit none
+        
+        !#### Flags getting passed in
+        character*10, intent(IN):: formOut
+
+        !#### Variables dimensions
+        character (len=100) :: Buffer                           !A character Buffer to read input argument
+        character (len=10)  :: xd,yd
+        character (len=100) :: fileName
+        
+        integer :: i,j,k,keff,fcounter                          !Counter variables
+        integer :: iz									        !counter variables
+        integer :: stat                                         !End of line variable
+        integer :: UnitNum                                      !UnitNum
+        !#### GRID PARAMETERS
+        integer :: nnx, nny, nnz      					        !x, y, and z grid dimensions 
+        integer :: nxy                					        !Number of grid points in a horizontal plane
+        real    :: xl, yl, zl         	  					    ! x, y, and z domain sizes
+        real    :: dx, dy, dz            					    ! x, y, and z grid lengths
+        integer :: nscalars 							        !Number of scalars                     
+ 
+        real(kind = R8P), dimension(:), allocatable :: xArr, yArr,zArr		                              !Array of x and y locations on the grid	                            						
+        real, allocatable, dimension(:,:,:)         :: u,v,w,t,e,p,q,c,phi                                !Parameter dimension      
+        real, allocatable, dimension(:,:,:)         :: up, wp, vp, tp, phip
+        real, allocatable, dimension(:)             :: TMean, phiMean
+        real, allocatable, dimension(:)             :: varwp,varup,varvp,vartp,varphip
+        real, allocatable, dimension(:,:)           :: velMean
+
+        !Plane Arrays in the format to be written into vec files
+        real(kind= R4P), dimension(:), allocatable  :: uWrite,vWrite,wWrite,tWrite,phiWrite     
+                            	
+        real    :: ugtop, ugbot, vgtop, vgbot
+        real    :: dtdzf, divgls, fcor, amonin, utau
+        real    :: time_start, dt, z0
+        
+        character*40 :: fchar
+        integer :: count
+        
+        real(R4P), allocatable :: uWriteNorm(:)
+        real(R4P), allocatable :: vWriteNorm(:)
+        real(R4P), allocatable :: wWriteNorm(:)
+        
+        ! character*10        :: modes
+        ! used for reading old file format title: PODM*_output*.PODOUT
+        
+    !begin looping through all availible POD_in files
+    
+    !modes = buffer(6:index(trim(adjustl(buffer)),'_output')-1)
+    ! used for reading old file format title: PODM*_output*.PODOUT
+    
+    open(unit=10,file="FileList.txt")
+    read(10,*,iostat=stat)buffer
+    
+    do while (stat .eq. 0)
+        
+        fileName = buffer(1:index(trim(adjustl(buffer)),'.PODOUT')-1)
+        
+        !write(*,*)"POD_M"//trim(adjustl(fchar))//".PODOUT"
+        !open(unit=10,file="POD_M"//trim(adjustl(fchar))//".PODOUT")
+        open(unit=12,file=trim(adjustl(buffer)))
+        
+        !read and open based on old title format
+        !write(*,*)"POD_M"//trim(adjustl(modes))//"_output"//trim(adjustl(fchar))//".PODOUT"
+        !open(unit=10,file="POD_M"//trim(adjustl(modes))//"_output"//trim(adjustl(fchar))//".PODOUT")
+        
+        ! quickly read through the header of the file
+        read(12,'(a)') Buffer, Buffer, Buffer
+        
+        ! read in the grid size
+        read(buffer((index(trim(adjustl(buffer)),'I=')+2):len(buffer)),'(I4P)') nnx
+        read(buffer((index(trim(adjustl(buffer)),'J=')+2):len(buffer)),'(I4P)') nny
+        nnz = 1
+        
+        if(.not.(allocated(xArr)) .or. .not.(allocated(yArr)) .or. &
+               .not.(allocated(uWrite)) .or. .not.(allocated(vWrite))) then
+            
+            allocate(xArr(nnx))
+            allocate(yArr(nny))
+            allocate(zArr(nnz))        
+            allocate(uWrite(nnx*nny*nnz))
+            allocate(vWrite(nnx*nny*nnz))
+            
+        end if
+        
+        do k=1,nnz
+            do j=1,nny
+                do i=1,nnx
+                    read(12,*) xArr(i), yArr(j), uWrite((k-1)*nnx*nny+(j-1)*nnx+i), vWrite((k-1)*nnx*nny+(j-1)*nnx+i)
+                    zArr(k) = 0
+                enddo
+            enddo
+        enddo
+        
+        !convert this PODOUT file to *.VTR
+        call write_VTR(formOut,fcounter,nnx,nny,nnz,xArr,yArr,zArr,uWrite,vWrite,wWrite,uWriteNorm,vWriteNorm,wWriteNorm,fileName)
+        
+        close(12)
+        read(10,*,iostat=stat)buffer
+        
+    end do
+    
+    end subroutine
     
     subroutine FIELD_to_PODIN
     
@@ -1423,7 +1774,7 @@ contains
 
             !Write the output file name
             UnitNum=20+fcounter
-            Write(WriteFileName,'(a,I0,a)') 'POD_input', fcounter, '.podin' 
+            Write(WriteFileName,'(a,I0,a)') 'POD_input', fcounter, '.PODIN' 
             open(unit=UnitNum,file=WriteFileName)
 
     
@@ -1567,7 +1918,7 @@ implicit none
 character *100 :: buffer  ! A character buffer to read input argument
 character *10  :: formOut ! The form the user chooses to output the data, as determined by input_VTR_POD and input_ASCII_BINARY
 character *40  :: fchar
-character *7   :: process
+character *15   :: process
 character*20   :: clow,chigh,cincr,filename
 character*10 :: extension
 
@@ -1647,13 +1998,33 @@ open(unit=65,file="commands.txt")
 			process = 'rPODOUT'
 			fileName = 'POD_M'
 			extension = '.PODOUT'
-        
+
         else if(input == 6) then
 			process = 'PIVVTR'
-			fileName = 'PIV_input'
-			extension = '.dat'
+			!fileName = 'PIV_input'
+            fileName = 'Input ('
+			extension = ').dat'
+            
+        else if(input == 7) then
+            process = 'PIVPODIN'
+            fileName = 'PIV_input'
+            extension = '.dat'
+            
+        else if(input == 8) then
+            process = 'PIVPODINVTR'
+            fileName = 'PIV_input'
+            extension = '.PODIN'
+            
+        else if(input == 9) then
+            process = 'PIVPODOUTVTR'
+            fileName = 'POD_M'
+            extension = '.PODOUT'
+            
+        else if(input == 10) then
+            process = 'rPIVPODOUTVTR'
+            fileName = 'POD_M'
+            extension = '.PODOUT'
 		end if
-	
 	
 	! determine output type
 	read(65,FI4P) input
@@ -1679,7 +2050,7 @@ open(unit=65,file="commands.txt")
 		write(cincr,'(i0)') incr
         
     ! read the mode if applicable
-    if(trim(adjustl(process))=="rPODOUT") then
+    if(trim(adjustl(process))=="rPODOUT" .or. trim(adjustl(process))=="rPIVPODOUTVTR") then
         read(65, FI4P) mode
     end if
 
@@ -1709,6 +2080,12 @@ else if(trim(adjustl(process)) == "cPODIN") then
     call FIELD_to_PODIN
 else if(trim(adjustl(process)) == "PIVVTR") then
     call PIV_to_VTR(formOut)
+else if(trim(adjustl(process)) == "PIVPODIN") then
+    call PIV_to_PODIN(formOut)
+else if(trim(adjustl(process)) == "PIVPODINVTR") then
+    call PODIN_to_VTR2D(formOut)
+else if(trim(adjustl(process)) == "PIVPODOUTVTR") then
+    call PODOUT_to_VTR2D(formOut)
 else if(trim(adjustl(process)) == "FIELD") then
     
     open(unit=50,file=buffer,form="unformatted")
